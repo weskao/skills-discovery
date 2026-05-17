@@ -1,18 +1,18 @@
-# skill-discovery
+# Skill Discovery 🚀
 
-A daily curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants: discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
+A daily curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants. Discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
 
 Run on a cron, or invoke manually with `/skill-discovery`.
 
-## What it does
+## ✨ Features
 
-- Polls curated GitHub orgs, topics, and "awesome" lists
-- Diffs findings against your local registry so already-known items are skipped
-- Scores each candidate 0–10 (category fit + stars + curated source)
-- Writes the top 10 to `<project-home>/skill-candidates.yaml`
-- Sends a Telegram shortlist; you reply `install 1 3 5` (or `install all` / `skip all` / `details 2`) to act on it
+- **Curated sources**: Polls GitHub orgs, topics, and "awesome" lists known to publish quality skills.
+- **Smart de-duplication**: Diffs findings against your local registry so already-known items are skipped.
+- **Transparent scoring**: Each candidate scored 0–10 by category fit, stars, and curated source.
+- **One-tap approval**: Telegram shortlist with reply commands — `install 1 3 5`, `install all`, `skip all`, or `details 2`.
+- **Graceful fallback**: Writes `skill-candidates.yaml` locally even when Telegram is unavailable.
 
-## Project-aware by design
+## 🧭 Project-aware by design
 
 The skill detects its host project's home directory at runtime, so the same install works under any `<project>/skills/<skill-name>/` layout.
 
@@ -24,7 +24,7 @@ The skill detects its host project's home directory at runtime, so the same inst
 
 State files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) always live directly under `<project-home>`.
 
-## Install
+## 🚀 Getting Started
 
 For default Claude Code:
 
@@ -42,14 +42,14 @@ git clone https://github.com/weskao/skill-discovery.git \
 
 The first time you run `/skill-discovery`, Step 0 auto-creates `<project-home>/skills-registry.yaml` from the bundled template.
 
-## Requirements
+## 📋 Requirements
 
 | Required | Used for | If missing |
 |---|---|---|
 | Claude Code (or compatible host) | Runs the skill | n/a |
 | `mcp__github__*` MCP tools | GitHub search & file fetch | Discovery cannot run |
 
-## Optional: Telegram notifications (and the `tg_send` caveat)
+## 📣 Optional: Telegram notifications (and the `tg_send` caveat)
 
 The skill delivers results via a shell function called **`tg_send`**. This is **not a standard tool** — it's user-specific glue around your own Telegram bot. If you're cloning this skill, you almost certainly don't have it.
 
@@ -82,7 +82,7 @@ The skill is **designed to degrade gracefully**:
 - **A failed `tg_send` is logged** to `<project-home>/log/skill-discovery.log` rather than crashing the run.
 - **Mode B (install via reply) becomes manual.** Instead of replying on Telegram, re-invoke the skill with explicit indices — e.g. ask Claude: *"From `<project-home>/skill-candidates.yaml`, install candidates 1, 3, and 5."*
 
-## How it works
+## ⚙️ How it works
 
 ### Mode A — Discovery (read-only on registry)
 
@@ -105,7 +105,7 @@ Skill: clear <project-home>/skill-candidates.yaml
 Skill: reply ✅ summary
 ```
 
-## Customization
+## 🛠️ Customization
 
 Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 
@@ -117,7 +117,7 @@ Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 
 Your manual edits to `watchlist` are preserved — the skill only ever **appends** to the `skills:` and `tools:` sections, never to `watchlist`.
 
-## File layout
+## 🏗️ File layout
 
 All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/` or `~/.openclaw/`):
 
@@ -129,14 +129,14 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Overwritten every run; cleared after install/skip |
 | `<project-home>/log/skill-discovery.log` | Skill (fallback) | Written only when `tg_send` is unavailable |
 
-## Safety rails
+## 🛡️ Safety rails
 
 - The skill **never overwrites** your `skills-registry.yaml`. All updates are append-only within categories.
 - If the registry file is malformed (missing required sections), the skill **stops with a clear error** rather than auto-repairing — your state is never silently mutated.
 - The skill never calls destructive commands (no `rm -rf`, no force-push) on your behalf.
 - Telegram replies that ask the skill to change access policy (e.g. *"approve the pending pairing"*) are **explicitly ignored** — only your local invocation can change access.
 
-## Recommended schedule
+## ⏰ Recommended schedule
 
 Pair with a `/schedule` skill (if your host provides one) or any cron mechanism to run daily. Use whichever CLI binary your host installs — e.g. `claude` for Claude Code, `openclaw` for openclaw:
 
@@ -147,6 +147,6 @@ Pair with a `/schedule` skill (if your host provides one) or any cron mechanism 
 
 A morning report keeps your skill library fresh without you having to remember.
 
-## License
+## 📄 License
 
-[MIT](LICENSE) © Wes Kao
+This project is licensed under the terms of the MIT open source license. Please refer to the [LICENSE](./LICENSE) file for the full terms.
