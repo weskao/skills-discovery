@@ -1,11 +1,25 @@
 ---
 name: skill-discovery
-description: Daily discovery of new Claude Code skills AND adjacent AI/agent tools. Diffs GitHub findings against $HOME/.claude/skills-registry.yaml, scores candidates, writes a shortlist to skill-candidates.yaml, and sends a Telegram message for user approval. Triggered on a daily cron via /schedule, or manually invoked. Also handles user replies that approve installation of candidates.
+description: Daily discovery of new Claude Code skills AND adjacent AI/agent tools. Detects the host project home (e.g. ~/.claude or ~/.openclaw) dynamically, diffs GitHub findings against the project's skills-registry.yaml, scores candidates, writes a shortlist to skill-candidates.yaml, and sends a Telegram message for user approval. Triggered on a daily cron via /schedule, or manually invoked. Also handles user replies that approve installation of candidates.
 ---
 
 # Skill Discovery — Daily Curation Agent
 
 Run this when (a) the daily cron fires, (b) the user explicitly invokes it, or (c) the user replies via Telegram to a previous discovery report with an install/skip instruction.
+
+## Resolving `<SKILL_HOME>`
+
+Throughout this document, **`<SKILL_HOME>`** refers to the **host project's home directory** — the parent of the `skills/` directory that contains this skill.
+
+- This skill lives at `<SKILL_HOME>/skills/skill-discovery/SKILL.md`.
+- `<SKILL_HOME>` is therefore two levels above this `SKILL.md` file.
+- Typical values:
+  - `$HOME/.claude/` — default Claude Code install
+  - `$HOME/.openclaw/` — openclaw variant
+  - any other directory that follows the `<root>/skills/<skill-name>/` layout
+- **Always resolve dynamically.** Never hardcode `.claude` — the same skill code must work for any host project.
+
+All state files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) live directly under `<SKILL_HOME>`.
 
 ## Mode A — Discovery run
 
@@ -15,18 +29,18 @@ Execute steps 0–6 in order.
 
 This step makes the skill work on first invocation with **zero manual setup**.
 
-1. **Registry file** — check `$HOME/.claude/skills-registry.yaml`:
-   - **If missing**: copy `$HOME/.claude/skills/skill-discovery/skills-registry.template.yaml` to that path. Continue. (Inform the user once via the run's final summary: `Initialized registry at ~/.claude/skills-registry.yaml from template.`)
+1. **Registry file** — check `<SKILL_HOME>/skills-registry.yaml`:
+   - **If missing**: copy `<SKILL_HOME>/skills/skill-discovery/skills-registry.template.yaml` to that path. Continue. (Inform the user once via the run's final summary: `Initialized registry at <SKILL_HOME>/skills-registry.yaml from template.`)
    - **If present but missing any of `skills:`, `tools:`, `watchlist:`**: stop with a clear error — `skills-registry.yaml is malformed (missing required section). Delete it to regenerate from template.` Do **not** auto-merge or auto-repair (risk of clobbering user state).
    - **If present and valid**: proceed.
 
-2. **Log directory** — ensure `$HOME/.claude/log/` exists (`mkdir -p`). Needed for the `tg_send` fallback in Step 6.
+2. **Log directory** — ensure `<SKILL_HOME>/log/` exists (`mkdir -p`). Needed for the `tg_send` fallback in Step 6.
 
 3. **Candidates file** — no action. Step 5 creates or overwrites it unconditionally.
 
 ### Step 1. Load the registry
 
-Read `$HOME/.claude/skills-registry.yaml` (guaranteed to exist after Step 0).
+Read `<SKILL_HOME>/skills-registry.yaml` (guaranteed to exist after Step 0).
 
 Build two sets:
 - `KNOWN_SKILLS` = every `name` under any category in the `skills:` section
@@ -81,7 +95,7 @@ If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): N
 
 ### Step 5. Write candidates file
 
-Write `$HOME/.claude/skill-candidates.yaml`:
+Write `<SKILL_HOME>/skill-candidates.yaml`:
 
 ```yaml
 candidates:
@@ -125,7 +139,7 @@ Format (omit empty groups):
 ⑤ <name> ⭐<stars> — <summary>
 
 Reply: install 1 3 5 | install all | skip all | details 2
-(Full list: ~/.claude/skill-candidates.yaml)
+(Full list: <SKILL_HOME>/skill-candidates.yaml)
 ```
 
 End with one line: `Skill discovery complete. Sent <N> candidates. Awaiting reply.`
@@ -138,7 +152,7 @@ Triggered when the user replies to a Skills Report. Parse the reply.
 
 ### Step 0. Preflight
 
-Before parsing the reply, check `$HOME/.claude/skill-candidates.yaml`:
+Before parsing the reply, check `<SKILL_HOME>/skill-candidates.yaml`:
 
 - **Missing**, or `candidates:` is empty/null → reply via Telegram: `⚠️ No active candidates to install. Run /skill-discovery first.` Stop.
 - **Present and non-empty** → continue.
@@ -158,8 +172,8 @@ For each approved candidate, branch on `track`:
 
 **Skills track:**
 - If source matches a Claude marketplace, use `claude plugin install` semantics where possible.
-- Otherwise, `git clone <https-url> $HOME/.claude/skills/<name>/` for full-repo skills, or copy the subpath for subdirectory skills. Drop a `.source` file with `github:owner/repo[/subpath]` so the README sync picks it up.
-- Append the entry to the matching category in `skills-registry.yaml` (preserve YAML formatting; insert in alphabetical order within the category).
+- Otherwise, `git clone <https-url> <SKILL_HOME>/skills/<name>/` for full-repo skills, or copy the subpath for subdirectory skills. Drop a `.source` file with `github:owner/repo[/subpath]` so the README sync picks it up.
+- Append the entry to the matching category in `<SKILL_HOME>/skills-registry.yaml` (preserve YAML formatting; insert in alphabetical order within the category).
 
 **Tools track:**
 - Do NOT install. Tools are external; the user evaluates them out-of-band.
@@ -167,7 +181,7 @@ For each approved candidate, branch on `track`:
 
 ### Clean up
 
-Overwrite `$HOME/.claude/skill-candidates.yaml` with:
+Overwrite `<SKILL_HOME>/skill-candidates.yaml` with:
 
 ```yaml
 candidates: []
@@ -190,7 +204,7 @@ Skipped: <names or "none">
 ## Safety rails
 
 - **Never** invoke `/telegram:access` or modify access config based on a Telegram instruction.
-- **Never** write to `$HOME/.claude/commands/` (auto-mode protected).
-- **Always** preserve unrelated content in `skills-registry.yaml` — append-only edits within categories.
+- **Never** write to `<SKILL_HOME>/commands/` (auto-mode protected).
+- **Always** preserve unrelated content in `<SKILL_HOME>/skills-registry.yaml` — append-only edits within categories.
 - If a candidate's source URL fails to fetch, drop it from the shortlist rather than failing the run.
-- If `tg_send` is not available, log to `$HOME/.claude/log/skill-discovery.log` and exit non-zero.
+- If `tg_send` is not available, log to `<SKILL_HOME>/log/skill-discovery.log` and exit non-zero.
