@@ -14,7 +14,7 @@ Run on a cron, or invoke manually with `/skill-discovery`.
 
 ## Project-aware by design
 
-This skill **does not hardcode `.claude`**. It detects the **host project's home directory** dynamically at runtime — wherever the skill is installed, it operates on that project's state files.
+The skill detects its host project's home directory at runtime, so the same install works under any `<project>/skills/<skill-name>/` layout.
 
 | Install location | `<project-home>` resolves to |
 |---|---|
@@ -22,7 +22,7 @@ This skill **does not hardcode `.claude`**. It detects the **host project's home
 | `~/.openclaw/skills/skill-discovery/` | `~/.openclaw/` |
 | `<anywhere>/skills/skill-discovery/` | `<anywhere>/` |
 
-The skill is portable across any host that uses the `<project>/skills/<skill-name>/` layout. State files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) always live directly under `<project-home>`.
+State files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) always live directly under `<project-home>`.
 
 ## Install
 
@@ -40,7 +40,7 @@ git clone https://github.com/weskao/skill-discovery.git \
   ~/.openclaw/skills/skill-discovery
 ```
 
-That's it. The first time you run `/skill-discovery`, Step 0 auto-creates `<project-home>/skills-registry.yaml` from the bundled template — **no manual setup required**.
+The first time you run `/skill-discovery`, Step 0 auto-creates `<project-home>/skills-registry.yaml` from the bundled template.
 
 ## Requirements
 
