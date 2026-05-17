@@ -138,10 +138,11 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 
 ## Recommended schedule
 
-Pair with the [`/schedule`](https://docs.claude.com/) skill (or any cron mechanism) to run daily:
+Pair with a `/schedule` skill (if your host provides one) or any cron mechanism to run daily. Use whichever CLI binary your host installs — e.g. `claude` for Claude Code, `openclaw` for openclaw:
 
 ```
-0 9 * * *   claude /skill-discovery
+0 9 * * *   claude /skill-discovery       # Claude Code
+0 9 * * *   openclaw /skill-discovery     # openclaw
 ```
 
 A morning report keeps your skill library fresh without you having to remember.
