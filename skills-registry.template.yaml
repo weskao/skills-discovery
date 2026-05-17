@@ -1,0 +1,84 @@
+# Skills Registry — Template
+# This file ships with the skill-discovery skill. On first run, it is copied
+# to $HOME/.claude/skills-registry.yaml if that file does not exist.
+#
+# Once copied, your personal registry lives at ~/.claude/skills-registry.yaml
+# and is updated by the discovery agent every time you approve new skills.
+# This template file is never overwritten by the agent.
+#
+# Customize the `watchlist` section below to match your interests.
+
+version: "1.0"
+last_updated: "1970-01-01"
+
+# ─── Known skills (already evaluated and installed or deliberately skipped) ───
+# Populated automatically as you approve candidates via Telegram replies.
+
+skills:
+  flutter: []
+  ui_ux: []
+  agent_ai: []
+  automation_production: []
+  mindset: []
+
+# ─── Tools track: non-skill resources (agent frameworks, coding agents, etc.) ─
+# These are NOT installed as Claude skills — they're external tools that
+# augment the production pipeline. Listed here so the daily discovery agent
+# can diff them against new findings and avoid re-surfacing known ones.
+
+tools:
+  agent_frameworks: []      # multi-agent orchestration, agent runtimes
+  coding_agents: []         # alternative AI coding CLIs (e.g. opencode, aider)
+  workflow_automation: []   # CI/CD agents, automated pipelines, devops AI
+  developer_tooling: []     # MCP servers, IDE integrations, dev plugins
+
+# ─── Watchlist: GitHub orgs/repos to poll for new skills each day ─────────────
+# Edit freely to match your interests. The defaults below are a general
+# starting point — add or remove orgs, topics, and keywords as you discover
+# new sources.
+
+watchlist:
+
+  # --- Skills track ---
+  orgs:
+    - flutter/skills                          # official Flutter skills
+    - nextlevelbuilder/ui-ux-pro-max-skill    # UI/UX suite
+    - alchaincyf                              # mindset/persona skills
+    - davila7/claude-code-templates           # general templates
+    - orchestra-research/ai-research-skills   # research/data skills
+    - openclaw/skills                         # community marketplace
+    - forrestchang/andrej-karpathy-skills     # coding guidelines
+
+  github_topics:
+    - claude-skill
+    - claude-code-skill
+    - claude-skills
+
+  categories_of_interest:
+    - flutter         # Flutter dev, Dart, state management, testing
+    - ui_ux           # UI/UX, design systems, components
+    - agent_ai        # agent orchestration, multi-agent, automation
+    - automation_production  # CI/CD, release, monitoring, productivity
+
+  # --- Tools track (broader search, no standard tag) ---
+  tool_keywords:
+    - "AI agent CLI"
+    - "LLM coding agent"
+    - "openagent"
+    - "claude code alternative"
+    - "AI workflow automation"
+    - "multi-agent framework"
+    - "MCP server"
+
+  awesome_lists:
+    - github:hesreallyhim/awesome-claude-code
+    - github:e2b-dev/awesome-ai-agents
+    - github:slavakurilyak/awesome-ai-agents
+    - github:kyrolabs/awesome-langchain
+    - github:punkpeye/awesome-mcp-servers
+
+  tool_categories_of_interest:
+    - agent_frameworks
+    - coding_agents
+    - workflow_automation
+    - developer_tooling
