@@ -122,3 +122,7 @@ Pair with the [`/schedule`](https://docs.claude.com/) skill (or any cron mechani
 ```
 
 A morning report keeps your skill library fresh without you having to remember.
+
+## License
+
+[MIT](LICENSE) © Wes Kao
