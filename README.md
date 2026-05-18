@@ -109,6 +109,11 @@ Skill: reply ✅ summary
 
 Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 
+| Track  | Default categories                                                              |
+|--------|---------------------------------------------------------------------------------|
+| Skills | `flutter`, `ui_ux`, `agent_ai`, `automation_production`                         |
+| Tools  | `agent_frameworks`, `coding_agents`, `workflow_automation`, `developer_tooling` |
+
 - `watchlist.orgs` — GitHub orgs known to publish skills
 - `watchlist.github_topics` — topic tags to search (default: `claude-skill`, `claude-code-skill`, `claude-skills`)
 - `watchlist.tool_keywords` — broader keywords for the tools track
