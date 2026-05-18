@@ -53,6 +53,20 @@ watchlist:
     - claude-skill
     - claude-code-skill
     - claude-skills
+    - claude-code-skills
+    - anthropic-skill
+    - claude-extension
+    - claude-agent
+    - mcp-skill
+
+  # Keyword search for the skills track — catches repos that publish skills
+  # without using a standard topic tag (parallel to tool_keywords below).
+  skill_keywords:
+    - "SKILL.md"
+    - "claude code skill"
+    - "claude skill"
+    - "anthropic claude skill"
+    - "claude-code command"
 
   categories_of_interest:
     - flutter         # Flutter dev, Dart, state management, testing
@@ -72,10 +86,13 @@ watchlist:
 
   awesome_lists:
     - github:hesreallyhim/awesome-claude-code
+    - github:anthropics/anthropic-cookbook      # official Anthropic recipes & prompts
     - github:e2b-dev/awesome-ai-agents
     - github:slavakurilyak/awesome-ai-agents
     - github:kyrolabs/awesome-langchain
     - github:punkpeye/awesome-mcp-servers
+    - github:wong2/awesome-mcp-servers          # second MCP aggregator
+    - github:appcypher/awesome-llm-apps         # LLM app examples, often skill-like
 
   tool_categories_of_interest:
     - agent_frameworks

@@ -47,13 +47,16 @@ Build two sets:
 - `KNOWN_TOOLS` = every `name` under any category in the `tools:` section
 
 Also load:
-- `watchlist.orgs`, `watchlist.github_topics` — skills track sources
+
+- `watchlist.orgs`, `watchlist.github_topics`, `watchlist.skill_keywords` — skills track sources
 - `watchlist.tool_keywords`, `watchlist.awesome_lists` — tools track sources
 - `watchlist.categories_of_interest`, `watchlist.tool_categories_of_interest`
 
 ### Step 2. Search — Skills track
 
 For each `github_topic`: call `mcp__github__search_repositories` with query `topic:<topic>`, sort by stars, take top 20.
+
+For each keyword in `watchlist.skill_keywords`: call `mcp__github__search_repositories` with that keyword as the query, sort by stars, take top 10. This catches repos that publish skills without using a standard topic tag.
 
 For each org in `watchlist.orgs`: list contents via `mcp__github__get_file_contents` to find subdirectories containing `SKILL.md`. Skip directories whose name is already in `KNOWN_SKILLS`.
 
