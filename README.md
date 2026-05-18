@@ -10,7 +10,7 @@ Run on a cron, or invoke manually with `/skill-discovery`.
 - **Smart de-duplication**: Diffs findings against your local registry so already-known items are skipped.
 - **Transparent scoring**: Each candidate scored 0–10 by category fit, stars, and curated source.
 - **One-tap approval**: Telegram shortlist with reply commands — `install 1 3 5`, `install all`, `skip all`, or `details 2`.
-- **Graceful fallback**: Writes `skill-candidates.yaml` locally even when Telegram is unavailable.
+- **Graceful fallback**: Merges new candidates into `skill-candidates.yaml` locally, preserving previously discovered pending entries even when Telegram is unavailable.
 
 ## 🧭 Project-aware by design
 
@@ -143,7 +143,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | `<project-home>/skills/skill-discovery/SKILL.md` | This repo | Updated via `git pull` |
 | `<project-home>/skills/skill-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
 | `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs |
-| `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Overwritten every run; cleared after install/skip |
+| `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Merged across runs (deduplicated by source/name); cleared after install/skip |
 | `<project-home>/log/skill-discovery.log` | Skill (fallback) | Written only when `tg_send` is unavailable |
 
 ## 🛡️ Safety rails

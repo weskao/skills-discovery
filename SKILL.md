@@ -36,7 +36,7 @@ This step makes the skill work on first invocation with **zero manual setup**.
 
 2. **Log directory** — ensure `<SKILL_HOME>/log/` exists (`mkdir -p`). Needed for the `tg_send` fallback in Step 6.
 
-3. **Candidates file** — no action. Step 5 creates or overwrites it unconditionally.
+3. **Candidates file** — no action at this point. If the file already exists when Step 5 runs, it will be read and its entries will be merged with the new batch (see Step 5). Step 5 never blindly overwrites existing candidates.
 
 ### Step 1. Load the registry
 
@@ -96,9 +96,17 @@ Sort descending. Keep top 6 skills + top 4 tools = 10 candidates max.
 
 If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` and stop.
 
-### Step 5. Write candidates file
+### Step 5. Merge and write candidates file
 
-Write `<SKILL_HOME>/skill-candidates.yaml`:
+Merge the new batch into `<SKILL_HOME>/skill-candidates.yaml` using the following algorithm:
+
+1. **Read existing entries** — if the file exists and `candidates:` is non-empty, load those entries as the _existing set_. If the file is absent or empty, the existing set is empty.
+2. **Deduplicate new batch against existing** — for each candidate in the new batch, look up a match in the existing set:
+   - Match first on `source` (exact string). If `source` is absent on either side, fall back to `name`.
+   - If a match is found, replace the existing entry with the new one (the fresh run has up-to-date stars/score/summary).
+   - If no match is found, the candidate is new — add it.
+3. **Preserve unmatched existing entries** — any existing entry that has no counterpart in the new batch stays in the merged set unchanged. These are candidates from a prior run that the current search simply didn't surface again; they remain pending.
+4. **Re-index** — after the merge, renumber all entries sequentially from 1 (skills first, then tools) and write the file:
 
 ```yaml
 candidates:
@@ -113,7 +121,7 @@ candidates:
 generated_at: <ISO-8601 datetime>
 ```
 
-Re-index from 1 across the merged shortlist (skills first, then tools).
+`generated_at` is always updated to the current run's ISO-8601 datetime, regardless of whether entries were added or carried over.
 
 ### Step 6. Send Telegram shortlist
 

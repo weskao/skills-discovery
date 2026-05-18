@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **skill-candidates.yaml merge behavior** — instead of overwriting on each run, the skill now merges new candidates into the existing file, deduplicating by source/name. This preserves previously discovered pending candidates across runs.
+
 ## [0.1.0] - 2026-05-18
 
 ### Added
