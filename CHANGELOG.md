@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`skill_keywords` broadened search** — GitHub discovery now accepts a `skill_keywords` list in configuration and scans additional topics and awesome-list sources, surfacing a wider range of relevant tools per run.
+
 ### Changed
 
 - **skill-candidates.yaml merge behavior** — instead of overwriting on each run, the skill now merges new candidates into the existing file, deduplicating by source/name. This preserves previously discovered pending candidates across runs.
+- Skill names in the Telegram approval message are now rendered as hyperlinks to their GitHub repositories for faster review.
 
 ## [0.1.0] - 2026-05-18
 
