@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-19
+
 ### Added
 
 - **`skill_keywords` broadened search** — GitHub discovery now accepts a `skill_keywords` list in configuration and scans additional topics and awesome-list sources, surfacing a wider range of relevant tools per run.
@@ -24,5 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Project-aware skill home** — the skill detects its host project's home directory at runtime, so the same install works under `~/.claude/skills/skill-discovery/`, `~/.openclaw/skills/skill-discovery/`, or any other `<root>/skills/<name>/` layout. State files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) always live directly under that resolved home.
 - MIT license, `.gitignore` for macOS and Windows system files, and a README usage guide noting the `tg_send` caveat.
 
-[unreleased]: https://github.com/weskao/skill-discovery/compare/v0.1.0...main
+[unreleased]: https://github.com/weskao/skill-discovery/compare/v0.2.0...main
+[0.2.0]: https://github.com/weskao/skill-discovery/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/weskao/skill-discovery/commits/v0.1.0
