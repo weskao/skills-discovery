@@ -58,6 +58,9 @@ watchlist:
     - claude-extension
     - claude-agent
     - mcp-skill
+    - claude-code-subagents   # subagent collections (e.g. wshobson/agents)
+    - agentic-coding          # orchestration repos (e.g. oh-my-claudecode)
+    - claude-code-plugin      # plugin-style Claude Code extensions
 
   # Keyword search for the skills track — catches repos that publish skills
   # without using a standard topic tag (parallel to tool_keywords below).

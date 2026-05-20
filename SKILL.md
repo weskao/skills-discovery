@@ -101,7 +101,7 @@ Score each remaining candidate (0–10):
 - `+1` if `stars ≤ 50`
 - `+1` if from a watchlist org or awesome list (curated source)
 - `-2` if category is `other`
-- `-3` if no SKILL.md (skills track) or no README (tools track) — likely empty/dead repo
+- `-3` if no SKILL.md anywhere in the repo (skills track) or no README (tools track) — likely empty/dead repo. A repo with SKILL.md only in subdirectories (multi-skill collection) does NOT incur this penalty.
 
 Sort descending. Keep top 6 skills + top 4 tools = 10 candidates max.
 
