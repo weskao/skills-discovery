@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Step 0 self-healing bootstrap** — first invocation auto-copies the template registry to `<SKILL_HOME>/skills-registry.yaml` and creates `<SKILL_HOME>/log/`, removing the need for any manual setup.
+- **`KNOWN_SKILLS` augmentation from installed state** — discovery now also reads `<SKILL_HOME>/skills/` and `<SKILL_HOME>/plugins/installed_plugins.json`, ensuring skills installed via `git clone` or `claude plugin install` are never re-surfaced as candidates.
+- **openclaw-based Telegram delivery** — the daily report is now written to `/tmp/skill_report.md` and sent via openclaw with `--delivery '{"parse_mode":"Markdown"}'`, enabling proper Markdown rendering. Falls back to logging if openclaw is unavailable.
+
+### Changed
+
+- **Merge algorithm gains a step 3** — existing candidates that were searched-but-not-top-ranked are now refreshed with fresh stars/score/summary instead of being left stale. Untouched entries are still preserved across runs.
+- Telegram report format clarified: skill/tool names render as `[name](url)` hyperlinks, and summaries must avoid `_` (underscore) to prevent unintended italics in Markdown parsing.
+
 ## [0.2.0] - 2026-05-19
 
 ### Added

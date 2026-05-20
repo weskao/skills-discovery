@@ -43,8 +43,16 @@ This step makes the skill work on first invocation with **zero manual setup**.
 Read `<SKILL_HOME>/skills-registry.yaml` (guaranteed to exist after Step 0).
 
 Build two sets:
+
 - `KNOWN_SKILLS` = every `name` under any category in the `skills:` section
 - `KNOWN_TOOLS` = every `name` under any category in the `tools:` section
+
+**Augment `KNOWN_SKILLS` from actual installed state** (catches skills installed outside this flow):
+
+1. **Skills directory**: add every directory name under `<SKILL_HOME>/skills/` to `KNOWN_SKILLS`.
+2. **Installed plugins**: read `<SKILL_HOME>/plugins/installed_plugins.json` (if present); for each key in the `plugins` object (format `<name>@<marketplace>`), strip the `@<marketplace>` suffix and add `<name>` to `KNOWN_SKILLS`.
+
+This ensures a skill installed via `claude plugin install` or `git clone` directly — without going through the Telegram approval flow — is never re-surfaced as a candidate.
 
 Also load:
 
@@ -61,6 +69,7 @@ For each keyword in `watchlist.skill_keywords`: call `mcp__github__search_reposi
 For each org in `watchlist.orgs`: list contents via `mcp__github__get_file_contents` to find subdirectories containing `SKILL.md`. Skip directories whose name is already in `KNOWN_SKILLS`.
 
 For each found skill, extract:
+
 - `name` — directory or repo name
 - `source` — `github:owner/repo[/subpath]`
 - `stars` — repo star count
@@ -74,6 +83,7 @@ For each keyword in `watchlist.tool_keywords`: call `mcp__github__search_reposit
 For each awesome list in `watchlist.awesome_lists`: fetch the README via `mcp__github__get_file_contents`, parse out repo links, keep entries that look like agent frameworks / coding agents / workflow tools.
 
 For each found tool, extract:
+
 - `name`, `source`, `stars`, `summary`
 - `category` — infer: `agent_frameworks` | `coding_agents` | `workflow_automation` | `developer_tooling` | `other`
 
@@ -84,6 +94,7 @@ For each found tool, extract:
 **Tools track**: drop any candidate where `name ∈ KNOWN_TOOLS`.
 
 Score each remaining candidate (0–10):
+
 - `+4` if category ∈ `categories_of_interest` (skills) or `tool_categories_of_interest` (tools)
 - `+3` if `stars > 500`
 - `+2` if `50 < stars ≤ 500`
@@ -100,12 +111,11 @@ If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): N
 
 Merge the new batch into `<SKILL_HOME>/skill-candidates.yaml` using the following algorithm:
 
-1. **Read existing entries** — if the file exists and `candidates:` is non-empty, load those entries as the _existing set_. If the file is absent or empty, the existing set is empty.
-2. **Deduplicate new batch against existing** — for each candidate in the new batch, look up a match in the existing set:
-   - Match first on `source` (exact string). If `source` is absent on either side, fall back to `name`.
-   - If a match is found, replace the existing entry with the new one (the fresh run has up-to-date stars/score/summary).
-   - If no match is found, the candidate is new — add it.
-3. **Preserve unmatched existing entries** — any existing entry that has no counterpart in the new batch stays in the merged set unchanged. These are candidates from a prior run that the current search simply didn't surface again; they remain pending.
+1. **Read existing entries** — if the file exists and `candidates:` is non-empty, load those entries as the *existing set*. If the file is absent or empty, the existing set is empty.
+2. **Merge new batch** — for each candidate in the top-6/top-4 new batch, look up a match in the existing set (match on `source` first, fall back to `name`):
+   - Match found → replace the existing entry with the fresh one (updated stars/score/summary).
+   - No match → the candidate is new, add it.
+3. **Refresh found-but-not-top existing entries** — for each remaining existing entry NOT already updated in step 2, check whether its name/source appeared anywhere in the raw search results (Steps 2–3, before the top-6/4 cutoff). If it was found, update its `stars`, `score`, and `summary` from the fresh data. If it was not found at all in this run's searches, leave it unchanged.
 4. **Re-index** — after the merge, renumber all entries sequentially from 1 (skills first, then tools) and write the file:
 
 ```yaml
@@ -125,34 +135,51 @@ generated_at: <ISO-8601 datetime>
 
 ### Step 6. Send Telegram shortlist
 
-Send via the `tg_send` zsh function (Bash: `zsh -ic 'tg_send "<msg>"'`) or, if running in a Telegram-channel session, via the Telegram MCP `reply` tool.
+**Sending command** — write the message body to a temp file, then send via openclaw directly (not `tg_send`, which lacks `--delivery` support) with Markdown parse mode:
 
-Format (omit empty groups):
+```text
+CHAT=$(jq -r '.allowFrom[0]' <SKILL_HOME>/channels/telegram/access.json)
+OC=$(ls ~/.nvm/versions/node/*/lib/node_modules/openclaw/openclaw.mjs 2>/dev/null | head -1)
+NODE=$(dirname "$(dirname "$(dirname "$(dirname "$OC")")")")/bin/node
+"$NODE" "$OC" message send \
+  --channel telegram \
+  --target "$CHAT" \
+  --message "$(cat /tmp/skill_report.md)" \
+  --delivery '{"parse_mode":"Markdown"}'
+```
 
-Each skill/tool name must be a Telegram Markdown hyperlink. Derive the URL from the `source` field:
+If running in a Telegram-channel session instead, use the Telegram MCP `reply` tool.
+
+If openclaw is unavailable, log to `<SKILL_HOME>/log/skill-discovery.log` and exit non-zero.
+
+**Format** (omit empty groups, write to `/tmp/skill_report.md`):
+
+Each skill/tool name must be a Telegram Markdown hyperlink `[name](url)`. Derive the URL from the `source` field:
 
 - `github:owner/repo` → `https://github.com/owner/repo`
 - `github:owner/repo/subpath` → `https://github.com/owner/repo`
 
-```
+Avoid `_` (underscore) in summaries — use a space or omit instead to prevent unintended italics in Telegram's Markdown parser.
+
+```text
 📦 Skills Report — <total> candidates (<YYYY-MM-DD>)
 
 — SKILLS —
 [Flutter]
-① [<name>](https://github.com/owner/repo) ⭐<stars> — <summary>
+① [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 [UI/UX]
-② [<name>](https://github.com/owner/repo) ⭐<stars> — <summary>
+② [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 [Agent/AI]
-③ [<name>](https://github.com/owner/repo) ⭐<stars> — <summary>
+③ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 — TOOLS —
 [Coding agents]
-④ [<name>](https://github.com/owner/repo) ⭐<stars> — <summary>
+④ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 [Agent frameworks]
-⑤ [<name>](https://github.com/owner/repo) ⭐<stars> — <summary>
+⑤ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 Reply: install 1 3 5 | install all | skip all | details 2
 (Full list: <SKILL_HOME>/skill-candidates.yaml)
@@ -210,6 +237,7 @@ First detect the host type from `<SKILL_HOME>`:
 - Append the entry to the matching category in `<SKILL_HOME>/skills-registry.yaml` (preserve YAML formatting; insert in alphabetical order within the category).
 
 **Tools track:**
+
 - Do NOT install. Tools are external; the user evaluates them out-of-band.
 - Just append the entry to the matching category in `tools:` so it won't be re-surfaced.
 
@@ -226,7 +254,7 @@ generated_at: null
 
 Reply via Telegram:
 
-```
+```text
 ✅ Updated registry
 Installed skills: <names or "none">
 Tools tracked: <names or "none">
