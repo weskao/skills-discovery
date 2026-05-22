@@ -65,8 +65,9 @@ This ensures a skill installed via `claude plugin install` or `git clone` direct
 Also load:
 
 - `watchlist.orgs`, `watchlist.github_topics`, `watchlist.skill_keywords` — skills track sources
-- `watchlist.tool_keywords`, `watchlist.awesome_lists` — tools track sources
-- `watchlist.categories_of_interest`, `watchlist.tool_categories_of_interest`
+- `watchlist.tool_keywords`, `watchlist.awesome_lists` — tools track sources (includes security awesome lists)
+- `watchlist.categories_of_interest` — includes `security`
+- `watchlist.tool_categories_of_interest` — includes `security_tooling`
 
 ### Step 2. Search — Skills track
 
@@ -86,7 +87,7 @@ For each found skill, extract:
 - `source` — `github:owner/repo[/subpath]`
 - `stars` — repo star count
 - `summary` — first non-heading line of `SKILL.md` (≤120 chars)
-- `category` — infer from name + summary: `flutter` | `ui_ux` | `agent_ai` | `automation_production` | `mindset` | `other`
+- `category` — infer from name + summary: `flutter` | `ui_ux` | `agent_ai` | `automation_production` | `mindset` | `security` | `other`
 
 ### Step 3. Search — Tools track
 
@@ -101,7 +102,7 @@ For each awesome list in `watchlist.awesome_lists`: fetch the README via `mcp__g
 For each found tool, extract:
 
 - `name`, `source`, `stars`, `summary`
-- `category` — infer: `agent_frameworks` | `coding_agents` | `workflow_automation` | `developer_tooling` | `other`
+- `category` — infer: `agent_frameworks` | `coding_agents` | `workflow_automation` | `developer_tooling` | `security_tooling` | `other`
 
 ### Step 4. Diff and score
 
@@ -191,12 +192,18 @@ Avoid `_` (underscore) in summaries — use a space or omit instead to prevent u
 [Agent/AI]
 ③ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
-— TOOLS —
-[Coding agents]
+[Security]
 ④ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
-[Agent frameworks]
+— TOOLS —
+[Coding agents]
 ⑤ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
+
+[Agent frameworks]
+⑥ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
+
+[Security tooling]
+⑦ [name](https://github.com/owner/repo) ⭐<stars> — <summary>
 
 Reply: install 1 3 5 | install all | skip all | details 2
 (Full list: <SKILL_HOME>/skill-candidates.yaml)

@@ -20,6 +20,7 @@ skills:
   agent_ai: []
   automation_production: []
   mindset: []
+  security: []
 
 # ─── Tools track: non-skill resources (agent frameworks, coding agents, etc.) ─
 # These are NOT installed as Claude skills — they're external tools that
@@ -31,6 +32,7 @@ tools:
   coding_agents: []         # alternative AI coding CLIs (e.g. opencode, aider)
   workflow_automation: []   # CI/CD agents, automated pipelines, devops AI
   developer_tooling: []     # MCP servers, IDE integrations, dev plugins
+  security_tooling: []      # SAST/DAST, vulnerability scanners, pentest aids, CTF tools
 
 # ─── Watchlist: GitHub orgs/repos to poll for new skills each day ─────────────
 # Edit freely to match your interests. The defaults below are a general
@@ -61,6 +63,8 @@ watchlist:
     - claude-code-subagents   # subagent collections (e.g. wshobson/agents)
     - agentic-coding          # orchestration repos (e.g. oh-my-claudecode)
     - claude-code-plugin      # plugin-style Claude Code extensions
+    - security-skill          # security-focused Claude skills
+    - cybersecurity-agent     # AI-assisted security agents
 
   # Keyword search for the skills track — catches repos that publish skills
   # without using a standard topic tag (parallel to tool_keywords below).
@@ -70,12 +74,15 @@ watchlist:
     - "claude skill"
     - "anthropic claude skill"
     - "claude-code command"
+    - "claude security skill"
+    - "security audit claude"
 
   categories_of_interest:
     - flutter         # Flutter dev, Dart, state management, testing
     - ui_ux           # UI/UX, design systems, components
     - agent_ai        # agent orchestration, multi-agent, automation
     - automation_production  # CI/CD, release, monitoring, productivity
+    - security        # security auditing, DevSecOps, OWASP, pentest, CTF
 
   # --- Tools track (broader search, no standard tag) ---
   tool_keywords:
@@ -86,6 +93,11 @@ watchlist:
     - "AI workflow automation"
     - "multi-agent framework"
     - "MCP server"
+    - "AI security scanner"
+    - "LLM pentest"
+    - "AI vulnerability detection"
+    - "MCP security"
+    - "AI SAST"
 
   awesome_lists:
     - github:hesreallyhim/awesome-claude-code
@@ -96,9 +108,13 @@ watchlist:
     - github:punkpeye/awesome-mcp-servers
     - github:wong2/awesome-mcp-servers          # second MCP aggregator
     - github:appcypher/awesome-llm-apps         # LLM app examples, often skill-like
+    - github:sbilly/awesome-security            # curated security tools and resources
+    - github:enaqx/awesome-pentest             # penetration testing tools and frameworks
+    - github:Hack-with-Github/Awesome-Hacking  # hacking tools with AI/LLM entries
 
   tool_categories_of_interest:
     - agent_frameworks
     - coding_agents
     - workflow_automation
     - developer_tooling
+    - security_tooling
