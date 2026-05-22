@@ -1,3 +1,9 @@
+## [0.4.0] - 2026-05-22
+
+### 🚀 Features
+
+- *(security)* Harden reply protocol against injection
+- *(discovery)* Add optional keyword arg to scope searches
 ## [0.3.0] - 2026-05-21
 
 ### 🚀 Features
@@ -7,6 +13,10 @@
 ### 🐛 Bug Fixes
 
 - *(scoring)* Exempt multi-skill collection repos and add subagent topics
+
+### 📚 Documentation
+
+- *(changelog)* Release v0.3.0
 ## [0.2.0] - 2026-05-19
 
 ### 🚀 Features
