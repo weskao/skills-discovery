@@ -21,6 +21,8 @@ skills:
   automation_production: []
   mindset: []
   security: []
+  hooks: []       # Claude Code hooks — pre/post-tool shell automations
+  workflows: []   # dynamic workflow scripts (.claude/workflows/)
 
 # ─── Tools track: non-skill resources (agent frameworks, coding agents, etc.) ─
 # These are NOT installed as Claude skills — they're external tools that
@@ -33,6 +35,7 @@ tools:
   workflow_automation: []   # CI/CD agents, automated pipelines, devops AI
   developer_tooling: []     # MCP servers, IDE integrations, dev plugins
   security_tooling: []      # SAST/DAST, vulnerability scanners, pentest aids, CTF tools
+  claude_automation: []     # reusable hooks, workflow scripts, slash commands, Claude Code extensions
 
 # ─── Watchlist: GitHub orgs/repos to poll for new skills each day ─────────────
 # Edit freely to match your interests. The defaults below are a general
@@ -63,6 +66,8 @@ watchlist:
     - claude-code-subagents   # subagent collections (e.g. wshobson/agents)
     - agentic-coding          # orchestration repos (e.g. oh-my-claudecode)
     - claude-code-plugin      # plugin-style Claude Code extensions
+    - claude-code-hook        # Claude Code hooks (pre/post-tool automations)
+    - claude-code-workflow    # dynamic workflow scripts for Claude Code
     - security-skill          # security-focused Claude skills
     - cybersecurity-agent     # AI-assisted security agents
 
@@ -76,6 +81,9 @@ watchlist:
     - "claude-code command"
     - "claude security skill"
     - "security audit claude"
+    - "claude code hooks"
+    - "claude workflow script"
+    - ".claude/workflows"
 
   categories_of_interest:
     - flutter         # Flutter dev, Dart, state management, testing
@@ -83,6 +91,8 @@ watchlist:
     - agent_ai        # agent orchestration, multi-agent, automation
     - automation_production  # CI/CD, release, monitoring, productivity
     - security        # security auditing, DevSecOps, OWASP, pentest, CTF
+    - hooks           # Claude Code hooks — pre/post-tool shell automations
+    - workflows       # dynamic workflow scripts, multi-agent orchestration
 
   # --- Tools track (broader search, no standard tag) ---
   tool_keywords:
@@ -98,6 +108,9 @@ watchlist:
     - "AI vulnerability detection"
     - "MCP security"
     - "AI SAST"
+    - "claude code hook script"
+    - "claude dynamic workflow"
+    - "multi-agent workflow script"
 
   awesome_lists:
     - github:hesreallyhim/awesome-claude-code
@@ -118,3 +131,4 @@ watchlist:
     - workflow_automation
     - developer_tooling
     - security_tooling
+    - claude_automation
