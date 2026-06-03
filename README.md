@@ -35,11 +35,18 @@ git clone https://github.com/weskao/skills-discovery.git \
   ~/.claude/skills/skills-discovery
 ```
 
-For openclaw (or any other host):
+For openclaw:
 
 ```bash
 git clone https://github.com/weskao/skills-discovery.git \
   ~/.openclaw/skills/skills-discovery
+```
+
+For hermes:
+
+```bash
+hermes skills install https://github.com/weskao/skills-discovery.git \
+  --name skills-discovery
 ```
 
 For a project-local install (scoped to the current project's `.claude/`):
@@ -61,15 +68,23 @@ The first time you run `/skills-discovery`, Step 0 auto-creates `<project-home>/
 | Claude Code (or compatible host) | Runs the skill | n/a |
 | `mcp__github__*` MCP tools | GitHub search & file fetch | Discovery cannot run |
 
-## 📣 Optional: Telegram notifications (and the `tg_send` caveat)
+## 📣 Telegram notifications (delivery options)
 
-The skill delivers results via a shell function called **`tg_send`**. This is **not a standard tool** — it's user-specific glue around your own Telegram bot. If you're cloning this skill, you almost certainly don't have it.
+Step 6 delivers the report through a **fallback chain** — it tries each channel below in order and stops at the first that works. Whatever happens, the shortlist is **always** also written to `<project-home>/skill-candidates.yaml`, so results are never lost even if every channel is unavailable.
 
-Three ways to handle this:
+> **Note:** earlier versions described a `tg_send`-first model. The skill does *not* require `tg_send` — it is only the third fallback. Pick whichever option below matches your setup.
 
-### Option 1 — Wire up your own `tg_send`
+### Option 1 — Telegram MCP plugin (zero setup)
 
-Define a zsh function that posts to the Telegram Bot API:
+If you have the `telegram` MCP plugin and run the skill inside a Telegram-channel session, it calls the `reply` tool directly. Nothing else to configure — this is the preferred path.
+
+### Option 2 — openclaw (the author's default)
+
+If you use [openclaw](https://github.com/openclaw/openclaw), the skill sends via `openclaw message send`, reading your chat id from `<project-home>/channels/telegram/access.json` (created by openclaw's `/telegram:access` pairing flow). Requires the `openclaw` CLI on `PATH` or in a standard node install location.
+
+### Option 3 — Roll your own `tg_send`
+
+If you have neither of the above, define a small zsh function and the fallback chain will use it:
 
 ```zsh
 # Add to ~/.zshrc — requires TG_BOT_TOKEN and TG_CHAT_ID env vars
@@ -82,16 +97,12 @@ tg_send() {
 
 Create a bot via [@BotFather](https://t.me/BotFather), get your chat ID from [@userinfobot](https://t.me/userinfobot), and export both as env vars.
 
-### Option 2 — Use the Telegram MCP plugin
-
-If you have the `telegram` MCP plugin installed and are running inside a Telegram-channel session, the skill will call `reply` directly. No `tg_send` needed.
-
-### Option 3 — Skip Telegram entirely
+### Option 4 — Skip Telegram entirely
 
 The skill is **designed to degrade gracefully**:
 
 - **Mode A (discovery) still works.** The shortlist is always written to `<project-home>/skill-candidates.yaml`. Open and review it manually.
-- **A failed `tg_send` is logged** to `<project-home>/log/skills-discovery.log` rather than crashing the run.
+- **A failed delivery is logged** to `<project-home>/log/skills-discovery.log` rather than crashing the run.
 - **Mode B (install via reply) becomes manual.** Instead of replying on Telegram, re-invoke the skill with explicit indices — e.g. ask Claude: *"From `<project-home>/skill-candidates.yaml`, install candidates 1, 3, and 5."*
 
 ## ⚙️ How it works
@@ -121,10 +132,10 @@ Skill: reply ✅ summary
 
 Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 
-| Track  | Default categories                                                              |
-|--------|---------------------------------------------------------------------------------|
-| Skills | `flutter`, `ui_ux`, `agent_ai`, `automation_production`                         |
-| Tools  | `agent_frameworks`, `coding_agents`, `workflow_automation`, `developer_tooling` |
+| Track  | Default categories                                                                                                      |
+|--------|-------------------------------------------------------------------------------------------------------------------------|
+| Skills | `flutter`, `ui_ux`, `agent_ai`, `automation_production`, `mindset`, `security`, `hooks`, `workflows`                     |
+| Tools  | `agent_frameworks`, `coding_agents`, `workflow_automation`, `developer_tooling`, `security_tooling`, `claude_automation` |
 
 - `watchlist.orgs` — GitHub orgs known to publish skills
 - `watchlist.github_topics` — topic tags to search across all of GitHub
@@ -145,7 +156,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | `<project-home>/skills/skills-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
 | `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs |
 | `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Merged across runs (deduplicated by source/name); cleared after install/skip |
-| `<project-home>/log/skills-discovery.log` | Skill (fallback) | Written only when `tg_send` is unavailable |
+| `<project-home>/log/skills-discovery.log` | Skill (fallback) | Written when every Telegram delivery channel (MCP, openclaw, `tg_send`) is unavailable |
 
 ## 🛡️ Safety rails
 
@@ -161,6 +172,7 @@ Pair with a `/schedule` skill (if your host provides one) or any cron mechanism 
 ```cron
 0 9 * * *   claude /skills-discovery       # Claude Code
 0 9 * * *   openclaw /skills-discovery     # openclaw
+0 9 * * *   hermes /skills-discovery       # hermes
 ```
 
 A morning report keeps your skill library fresh without you having to remember.
