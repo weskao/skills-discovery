@@ -20,6 +20,7 @@ The skill detects its host project's home directory at runtime, so the same inst
 | --- | --- |
 | `~/.claude/skills/skills-discovery/` | `~/.claude/` |
 | `~/.openclaw/skills/skills-discovery/` | `~/.openclaw/` |
+| `~/.hermes/skills/skills-discovery/` | `~/.hermes/` |
 | `<project_root>/.claude/skills/skills-discovery/` | `<project_root>/.claude/` |
 | `<anywhere>/skills/skills-discovery/` | `<anywhere>/` |
 
