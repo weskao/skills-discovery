@@ -1,8 +1,29 @@
+## [0.6.0] - 2026-06-03
+
+### 🚀 Features
+
+- *(registry)* Add hooks and workflows categories
+- *(skill)* [**breaking**] Add categories, delivery chain, name validation
+
+### 📚 Documentation
+
+- *(readme)* Add hermes host to project-aware table
+- *(readme)* Update delivery options and add hermes examples
+- Add maintainer guide with category invariant
+
+### ⚙️ Miscellaneous Tasks
+
+- Add category-sync guard and doc linting
+- Add .source for copy-based installs
 ## [0.5.1] - 2026-05-28
 
 ### 🐛 Bug Fixes
 
 - *(discovery)* Make candidates merge append-only
+
+### 📚 Documentation
+
+- *(changelog)* Release v0.5.1
 ## [0.5.0] - 2026-05-24
 
 ### 🚀 Features
