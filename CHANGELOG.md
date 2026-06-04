@@ -1,3 +1,12 @@
+## [0.7.0] - 2026-06-04
+
+### 🚀 Features
+
+- *(registry)* [**breaking**] Enrich entries with date/star metadata
+
+### 🐛 Bug Fixes
+
+- *(spec)* Fill metadata gaps for v1.0-migrated registry entries
 ## [0.6.0] - 2026-06-03
 
 ### 🚀 Features
@@ -10,6 +19,7 @@
 - *(readme)* Add hermes host to project-aware table
 - *(readme)* Update delivery options and add hermes examples
 - Add maintainer guide with category invariant
+- *(changelog)* Release v0.6.0
 
 ### ⚙️ Miscellaneous Tasks
 
