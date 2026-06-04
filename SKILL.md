@@ -21,6 +21,10 @@ Throughout this document, **`<SKILL_HOME>`** refers to the **host project's home
 
 All state files (`skills-registry.yaml`, `skill-candidates.yaml`, `log/`) live directly under `<SKILL_HOME>`.
 
+## Conventions
+
+**Date format:** all date fields (`first_found`, `updated`, `first_seen`, `last_seen`) use `YYYY-MM-DD` (ISO 8601, local date).
+
 ## Arguments
 
 | Argument | Type | Description |
@@ -44,7 +48,7 @@ This step makes the skill work on first invocation with **zero manual setup**.
 
    Then check the `version:` field:
    - **`"2.0"` (current)**: proceed as-is.
-   - **`"1.0"` or absent**: auto-migrate. For every category in `skills:` and `tools:`, convert any plain-string entry `"<name>"` to an object `{name: "<name>", source: null, stars: null, first_found: null, updated: null}`. Set `version: "2.0"`. Write back to `skills-registry.yaml`. Inform the user once: `Migrated skills-registry.yaml from v1.0 → v2.0: <N> entries enriched. source/stars will populate as skills are re-discovered.`
+   - **`"1.0"` or absent**: auto-migrate. For every category in `skills:` and `tools:`, convert any plain-string entry `"<name>"` to an object `{name: "<name>", source: null, stars: null, first_found: <today>, updated: null}`. Set `version: "2.0"`. Write back to `skills-registry.yaml`. Inform the user once: `Migrated skills-registry.yaml from v1.0 → v2.0: <N> entries enriched. source/stars will populate as skills are re-discovered.`
    - **Unknown version**: stop with `skills-registry.yaml version "<v>" is not supported by this skill. Update the skill or delete the registry to regenerate from template.`
 
 2. **Log directory** — ensure `<SKILL_HOME>/log/` exists (`mkdir -p`). Needed for the file-logging fallback (option 4) in Step 6.
@@ -136,12 +140,18 @@ Score each remaining candidate (0–10):
 
 Sort descending. Keep top 6 skills + top 4 tools = 10 candidates max.
 
-**Refresh known entries from search results.** For any entry in `KNOWN_SKILL_ENTRIES` / `KNOWN_TOOL_ENTRIES` whose `source` matches a raw search result from Steps 2–3 (regardless of whether it made the top-6/4 cutoff), update that entry's object in `skills-registry.yaml`:
+**Refresh known entries from search results.** For every entry in `KNOWN_SKILL_ENTRIES` / `KNOWN_TOOL_ENTRIES`, attempt to find a matching raw search result from Steps 2–3 (regardless of whether it made the top-6/4 cutoff) using the following two-pass lookup:
 
+1. **Source match (primary):** if the entry's `source` is non-null, match against a search result whose source equals `entry.source`.
+2. **Name match (fallback):** if `entry.source` is null (e.g. a v1.0-migrated entry), match against a search result whose `name` equals `entry.name`. On a successful name match, **also backfill `source`** from the search result so future runs use the faster source-match path.
+
+When a match is found (by either path), update the entry's object in `skills-registry.yaml`:
+
+- `source` → backfilled from search result (name-match path only; already set on source-match path)
 - `stars` → fresh value from search result
-- `updated` → today's date (`YYYY-MM-DD`)
+- `updated` → today's date
 
-Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries.` If no entries qualify, skip silently.
+Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries (<M> source backfilled).` If no entries qualify, skip silently.
 
 If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` and stop.
 
