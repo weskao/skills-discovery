@@ -8,11 +8,22 @@
 #
 # Customize the `watchlist` section below to match your interests.
 
-version: "1.0"
+version: "2.0"
 last_updated: "1970-01-01"
 
 # ─── Known skills (already evaluated and installed or deliberately skipped) ───
 # Populated automatically as you approve candidates via Telegram replies.
+#
+# v2.0 entry format — each entry is an object:
+#
+#   flutter:
+#     - name: flutter-riverpod
+#       source: github:owner/repo
+#       stars: 1200
+#       first_found: "2026-01-15" # date first found by discovery agent; never changes
+#       updated: "2026-06-04"     # last time stars were refreshed by a discovery run
+#
+# Existing v1.0 registries (plain-string entries) are auto-migrated on first run.
 
 skills:
   flutter: []

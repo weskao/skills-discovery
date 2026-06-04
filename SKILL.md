@@ -42,6 +42,11 @@ This step makes the skill work on first invocation with **zero manual setup**.
    - **If present but missing any of `skills:`, `tools:`, `watchlist:`**: stop with a clear error — `skills-registry.yaml is malformed (missing required section). Delete it to regenerate from template.` Do **not** auto-merge or auto-repair (risk of clobbering user state).
    - **If present and valid**: proceed.
 
+   Then check the `version:` field:
+   - **`"2.0"` (current)**: proceed as-is.
+   - **`"1.0"` or absent**: auto-migrate. For every category in `skills:` and `tools:`, convert any plain-string entry `"<name>"` to an object `{name: "<name>", source: null, stars: null, first_found: null, updated: null}`. Set `version: "2.0"`. Write back to `skills-registry.yaml`. Inform the user once: `Migrated skills-registry.yaml from v1.0 → v2.0: <N> entries enriched. source/stars will populate as skills are re-discovered.`
+   - **Unknown version**: stop with `skills-registry.yaml version "<v>" is not supported by this skill. Update the skill or delete the registry to regenerate from template.`
+
 2. **Log directory** — ensure `<SKILL_HOME>/log/` exists (`mkdir -p`). Needed for the file-logging fallback (option 4) in Step 6.
 
 3. **Candidates file** — no action at this point. If the file already exists when Step 5 runs, it will be read and its entries will be merged with the new batch (see Step 5). Step 5 is **append-only with refresh** — it never deletes existing entries, regardless of mode or keyword.
@@ -50,10 +55,12 @@ This step makes the skill work on first invocation with **zero manual setup**.
 
 Read `<SKILL_HOME>/skills-registry.yaml` (guaranteed to exist after Step 0).
 
-Build two sets:
+Build two sets and two maps:
 
-- `KNOWN_SKILLS` = every `name` under any category in the `skills:` section
-- `KNOWN_TOOLS` = every `name` under any category in the `tools:` section
+- `KNOWN_SKILLS` = set of names from `skills:` — for object entries read `.name`; for legacy plain-string entries read the string itself (defence against partially-migrated files)
+- `KNOWN_TOOLS` = set of names from `tools:` — same rule
+- `KNOWN_SKILL_ENTRIES` = map of `name → {source, stars, first_found, updated}` for every object entry in `skills:` (null fields are acceptable; used in Step 4 star-refresh)
+- `KNOWN_TOOL_ENTRIES` = same, for `tools:` object entries
 
 **Augment `KNOWN_SKILLS` from actual installed state** (catches skills installed outside this flow):
 
@@ -129,6 +136,13 @@ Score each remaining candidate (0–10):
 
 Sort descending. Keep top 6 skills + top 4 tools = 10 candidates max.
 
+**Refresh known entries from search results.** For any entry in `KNOWN_SKILL_ENTRIES` / `KNOWN_TOOL_ENTRIES` whose `source` matches a raw search result from Steps 2–3 (regardless of whether it made the top-6/4 cutoff), update that entry's object in `skills-registry.yaml`:
+
+- `stars` → fresh value from search result
+- `updated` → today's date (`YYYY-MM-DD`)
+
+Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries.` If no entries qualify, skip silently.
+
 If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` and stop.
 
 ### Step 5. Merge and write candidates file
@@ -139,9 +153,9 @@ Merge the new batch into `<SKILL_HOME>/skill-candidates.yaml` using the followin
 
 1. **Read existing entries** — if the file exists and `candidates:` is non-empty, load those entries as the *existing set*. If the file is absent or empty, the existing set is empty.
 2. **Merge new batch** — for each candidate in the top-6/top-4 new batch, look up a match in the existing set (match on `source` first, fall back to `name`):
-   - Match found → replace the existing entry with the fresh one (updated stars/score/summary).
-   - No match → the candidate is new, **append** it to the existing set.
-3. **Refresh found-but-not-top existing entries** — for each remaining existing entry NOT already updated in step 2, check whether its name/source appeared anywhere in the raw search results (Steps 2–3, before the top-6/4 cutoff). If it was found, update its `stars`, `score`, and `summary` from the fresh data. If it was not found at all in this run's searches, **leave it unchanged** — never delete it just because it was outside this run's keyword scope.
+   - Match found → update `stars`, `score`, `summary`, and `last_seen` from the fresh data. **Leave `first_seen` unchanged** — it records the original discovery date.
+   - No match → the candidate is new; **append** it with `first_seen: <today>` and `last_seen: <today>`.
+3. **Refresh found-but-not-top existing entries** — for each remaining existing entry NOT already updated in step 2, check whether its name/source appeared anywhere in the raw search results (Steps 2–3, before the top-6/4 cutoff). If it was found, update its `stars`, `score`, `summary`, and `last_seen` from the fresh data. **Leave `first_seen` unchanged.** If it was not found at all in this run's searches, **leave it unchanged** — never delete it just because it was outside this run's keyword scope.
 4. **Re-index** — after the merge, renumber all entries sequentially from 1 (skills first, then tools) and write the file:
 
 ```yaml
@@ -154,6 +168,8 @@ candidates:
     stars: <N>
     score: <N>
     summary: <one-line>
+    first_seen: <YYYY-MM-DD>   # set once when first appended; never overwritten on refresh
+    last_seen: <YYYY-MM-DD>    # updated each time stars/score are refreshed
 generated_at: <ISO-8601 datetime>
 ```
 
@@ -307,12 +323,28 @@ First detect the host type from `<SKILL_HOME>`:
 - If source matches a Claude marketplace, use `claude plugin install` semantics where possible.
 - Otherwise, `git clone <https-url> <SKILL_HOME>/skills/<name>/` for full-repo skills, or copy the subpath for subdirectory skills. Drop a `.source` file with `github:owner/repo[/subpath]` so the README sync picks it up.
 
-- Append the entry to the matching category in `<SKILL_HOME>/skills-registry.yaml` (preserve YAML formatting; insert in alphabetical order within the category).
+- Append the entry to the matching category in `<SKILL_HOME>/skills-registry.yaml` as an object (preserve YAML formatting; insert in alphabetical order within the category by `name`):
+
+```yaml
+- name: <name>
+  source: <source>          # from the candidate's source field
+  stars: <stars>            # from the candidate's stars field
+  first_found: <YYYY-MM-DD> # date first found by discovery agent; set once, never overwritten
+  updated: <YYYY-MM-DD>     # same as first_found on first write; refreshed by Step 4
+```
 
 **Tools track:**
 
 - Do NOT install. Tools are external; the user evaluates them out-of-band.
-- Just append the entry to the matching category in `tools:` so it won't be re-surfaced.
+- Append the entry to the matching category in `tools:` as an object (same format as skills) so it won't be re-surfaced:
+
+```yaml
+- name: <name>
+  source: <source>
+  stars: <stars>
+  first_found: <YYYY-MM-DD>
+  updated: <YYYY-MM-DD>
+```
 
 ### Clean up
 

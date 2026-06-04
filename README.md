@@ -146,6 +146,19 @@ Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 
 Your manual edits to `watchlist` are preserved — the skill only ever **appends** to the `skills:` and `tools:` sections, never to `watchlist`.
 
+Each registry entry carries metadata that refreshes automatically:
+
+```yaml
+flutter:
+  - name: flutter-riverpod
+    source: github:owner/repo
+    stars: 1200
+    first_found: "2026-01-15" # date first found by discovery agent; never changes
+    updated: "2026-06-04"     # refreshed each discovery run when the repo is re-found
+```
+
+**Migrating from v1.0:** if your `skills-registry.yaml` has `version: "1.0"` (plain-string entries), the skill upgrades it automatically on first run — no manual action needed.
+
 ## 🏗️ File layout
 
 All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/` or `~/.openclaw/`):
@@ -154,7 +167,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | --- | --- | --- |
 | `<project-home>/skills/skills-discovery/SKILL.md` | This repo | Updated via `git pull` |
 | `<project-home>/skills/skills-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
-| `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs |
+| `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs. v2.0: entries are objects `{name, source, stars, first_found, updated}`; v1.0 plain-string entries are auto-migrated on first run. |
 | `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Merged across runs (deduplicated by source/name); cleared after install/skip |
 | `<project-home>/log/skills-discovery.log` | Skill (fallback) | Written when every Telegram delivery channel (MCP, openclaw, `tg_send`) is unavailable |
 
