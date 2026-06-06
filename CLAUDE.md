@@ -92,6 +92,3 @@ These follow the same "defined in more than one place" hazard — keep them alig
   lists and code blocks (markdownlint MD040/MD031/MD032).
 - **Commits**: Conventional Commits. Mark schema/output-format-breaking changes with `!`
   and a `BREAKING CHANGE:` footer. `CHANGELOG.md` is generated from commit history.
-- **`version:` in the template** is the *registry schema* version, independent of the
-  skill's release version (the git tag / `CHANGELOG.md`). Only bump it when the registry
-  file *structure* changes.

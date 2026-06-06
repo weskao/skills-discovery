@@ -46,11 +46,6 @@ This step makes the skill work on first invocation with **zero manual setup**.
    - **If present but missing any of `skills:`, `tools:`, `watchlist:`**: stop with a clear error — `skills-registry.yaml is malformed (missing required section). Delete it to regenerate from template.` Do **not** auto-merge or auto-repair (risk of clobbering user state).
    - **If present and valid**: proceed.
 
-   Then check the `version:` field:
-   - **`"2.0"` (current)**: proceed as-is.
-   - **`"1.0"` or absent**: auto-migrate. For every category in `skills:` and `tools:`, convert any plain-string entry `"<name>"` to an object `{name: "<name>", source: null, stars: null, first_found: <today>, updated: null}`. Set `version: "2.0"`. Write back to `skills-registry.yaml`. Inform the user once: `Migrated skills-registry.yaml from v1.0 → v2.0: <N> entries enriched. source/stars will populate as skills are re-discovered.`
-   - **Unknown version**: stop with `skills-registry.yaml version "<v>" is not supported by this skill. Update the skill or delete the registry to regenerate from template.`
-
 2. **Log directory** — ensure `<SKILL_HOME>/log/` exists (`mkdir -p`). Needed for the file-logging fallback (option 4) in Step 6.
 
 3. **Candidates file** — no action at this point. If the file already exists when Step 5 runs, it will be read and its entries will be merged with the new batch (see Step 5). Step 5 is **append-only with refresh** — it never deletes existing entries, regardless of mode or keyword.

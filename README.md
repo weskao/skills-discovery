@@ -157,8 +157,6 @@ flutter:
     updated: "2026-06-04"     # refreshed each discovery run when the repo is re-found
 ```
 
-**Migrating from v1.0:** if your `skills-registry.yaml` has `version: "1.0"` (plain-string entries), the skill upgrades it automatically on first run — no manual action needed.
-
 ## 🏗️ File layout
 
 All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/` or `~/.openclaw/`):

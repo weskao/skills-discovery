@@ -8,13 +8,12 @@
 #
 # Customize the `watchlist` section below to match your interests.
 
-version: "2.0"
 last_updated: "1970-01-01"
 
 # ─── Known skills (already evaluated and installed or deliberately skipped) ───
 # Populated automatically as you approve candidates via Telegram replies.
 #
-# v2.0 entry format — each entry is an object:
+# Entry format — each entry is an object:
 #
 #   flutter:
 #     - name: flutter-riverpod
