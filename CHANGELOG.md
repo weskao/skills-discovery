@@ -1,3 +1,8 @@
+## [0.8.0] - 2026-06-06
+
+### 🚜 Refactor
+
+- *(registry)* [**breaking**] Remove version field and migration logic
 ## [0.7.0] - 2026-06-04
 
 ### 🚀 Features
@@ -7,6 +12,10 @@
 ### 🐛 Bug Fixes
 
 - *(spec)* Fill metadata gaps for v1.0-migrated registry entries
+
+### 📚 Documentation
+
+- *(changelog)* Release v0.7.0
 ## [0.6.0] - 2026-06-03
 
 ### 🚀 Features
