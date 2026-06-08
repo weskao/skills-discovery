@@ -146,7 +146,17 @@ When a match is found (by either path), update the entry's object in `skills-reg
 - `stars` → fresh value from search result
 - `updated` → today's date
 
-Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries (<M> source backfilled).` If no entries qualify, skip silently.
+**WebFetch fallback for unmatched entries.** After the search-based pass above, collect all entries in `KNOWN_SKILL_ENTRIES` / `KNOWN_TOOL_ENTRIES` whose `source` is non-null but were **not** matched by either pass above. For each such entry:
+
+1. Derive the GitHub URL: `source` is `github:owner/repo[/subpath]` → URL is `https://github.com/owner/repo`.
+2. Call `WebFetch` with that URL.
+3. In the returned HTML, locate the star count. GitHub embeds it in an element that contains the text `stars` — look for a pattern matching `[0-9,]+k?` adjacent to the word "star" (e.g. `"1.2k"`, `"42,300"`). Normalise to an integer (multiply `k` values by 1000, strip commas).
+4. If a valid integer is extracted and it differs from the entry's current `stars`, update `stars` and `updated` in `skills-registry.yaml`.
+5. If the fetch fails (network error, 404, parse failure), leave the entry unchanged and log: `WebFetch fallback failed for <name>: <reason>`.
+
+Cap the WebFetch fallback at **10 entries per run** — if more than 10 entries are unmatched, pick the 10 with the oldest `updated` date (or null first) so stalest entries are refreshed first.
+
+Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries (<M> source backfilled, <W> via WebFetch).` If no entries qualify, skip silently.
 
 If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` and stop.
 
