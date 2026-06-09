@@ -87,11 +87,11 @@ For each keyword in `watchlist.skill_keywords`: call `mcp__github__search_reposi
 
 For each org in `watchlist.orgs`: list contents via `mcp__github__get_file_contents` to find subdirectories containing `SKILL.md`. Skip directories whose name is already in `KNOWN_SKILLS`.
 
-For each found skill, extract:
+For each found skill, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows:
 
-- `name` — directory or repo name
-- `source` — `github:owner/repo[/subpath]`
-- `stars` — repo star count
+- `name` — directory or repo name (from `name` or `full_name` suffix of the **same result object**)
+- `source` — `github:<full_name>[/subpath]` derived from the **same result object's `full_name`**
+- `stars` — the integer value of `stargazers_count` from the **same result object**. **Verify: the `full_name` field of that object must match the `owner/repo` embedded in `source`.** If they do not match, discard the candidate — do not guess or borrow from an adjacent row.
 - `summary` — first non-heading line of `SKILL.md` (≤120 chars)
 - `category` — infer from name + summary: `flutter` | `ui_ux` | `agent_ai` | `automation_production` | `mindset` | `security` | `hooks` | `workflows` | `other`. Heuristics for the less-obvious buckets: a pre/post-tool shell automation or anything named `*-hook` → `hooks`; a dynamic workflow script, `.claude/workflows`, or a multi-agent orchestration script → `workflows`; security auditing / OWASP / pentest / CTF → `security`. Fall back to `other` only when none fit.
 
@@ -110,9 +110,12 @@ For each keyword in `watchlist.tool_keywords`: call `mcp__github__search_reposit
 
 For each awesome list in `watchlist.awesome_lists`: fetch the README via `mcp__github__get_file_contents`, parse out repo links, keep entries that look like agent frameworks / coding agents / workflow tools.
 
-For each found tool, extract:
+For each found tool, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows:
 
-- `name`, `source`, `stars`, `summary`
+- `name` — from `name` or `full_name` suffix of the **same result object**
+- `source` — `github:<full_name>` from the **same result object's `full_name`**
+- `stars` — `stargazers_count` from the **same result object**. **Verify: the `full_name` field must match the `owner/repo` in `source`.** If they do not match, discard the candidate.
+- `summary` — first meaningful line of README (≤120 chars)
 - `category` — infer: `agent_frameworks` | `coding_agents` | `workflow_automation` | `developer_tooling` | `security_tooling` | `claude_automation` | `other`. Heuristic: reusable Claude Code extensions — hooks, slash commands, workflow scripts, statusline/settings glue — go to `claude_automation`; SAST / DAST / vulnerability scanners / pentest aids → `security_tooling`. Fall back to `other` only when none fit.
 
 **Sanitize before recording** — same rules as Step 2: validate `name` against `^[A-Za-z0-9_.-]+$`, sanitize `summary` (strip control chars, truncate, replace injection patterns with `[summary withheld]`).
@@ -150,7 +153,11 @@ When a match is found (by either path), update the entry's object in `skills-reg
 
 1. Derive the GitHub URL: `source` is `github:owner/repo[/subpath]` → URL is `https://github.com/owner/repo`.
 2. Call `WebFetch` with that URL.
-3. In the returned HTML, locate the star count. GitHub embeds it in an element that contains the text `stars` — look for a pattern matching `[0-9,]+k?` adjacent to the word "star" (e.g. `"1.2k"`, `"42,300"`). Normalise to an integer (multiply `k` values by 1000, strip commas).
+3. In the returned HTML, locate the star count using these patterns **in priority order** (stop at the first match):
+   - `title="N"` attribute on an element whose class contains `js-social-count` or `Counter` and whose surrounding context includes "star". Extract the `title` value — it is always a plain integer, no `k` suffix.
+   - An anchor or span whose `href` ends with `/stargazers` and contains a numeric text value matching `^[0-9,]+k?$`.
+   - As a last resort: the first occurrence of `[0-9,]+k?` immediately preceded or followed by the word "star" within a 30-character window.
+   Normalise to an integer: if the value ends with `k` or `K`, multiply by 1000; strip commas. Accept only values in the range **1–10,000,000**; reject anything outside that range as a parse error.
 4. If a valid integer is extracted and it differs from the entry's current `stars`, update `stars` and `updated` in `skills-registry.yaml`.
 5. If the fetch fails (network error, 404, parse failure), leave the entry unchanged and log: `WebFetch fallback failed for <name>: <reason>`.
 
