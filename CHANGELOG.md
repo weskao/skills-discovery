@@ -1,9 +1,18 @@
+## [0.9.1] - 2026-06-09
+
+### 🐛 Bug Fixes
+
+- **extraction:** Prevent star-count cross-contamination between search result rows
 ## [0.9.0] - 2026-06-09
 
 ### 🚀 Features
 
 - **spec:** Add WebFetch fallback for star-count refresh
 - **spec:** Darwin optimization — dim4 + dim9 (+7.8 pts)
+
+### ⚙️ Miscellaneous Tasks
+
+- **release:** Bump version to v0.9.0
 ## [0.8.0] - 2026-06-06
 
 ### 🚜 Refactor
