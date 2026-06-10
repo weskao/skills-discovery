@@ -1,8 +1,17 @@
+## [0.9.2] - 2026-06-10
+
+### 🐛 Bug Fixes
+
+- **spec:** Cross-track dedup compares against kept top-6, not full scored set
 ## [0.9.1] - 2026-06-09
 
 ### 🐛 Bug Fixes
 
 - **extraction:** Prevent star-count cross-contamination between search result rows
+
+### ⚙️ Miscellaneous Tasks
+
+- **release:** Bump version to v0.9.1
 ## [0.9.0] - 2026-06-09
 
 ### 🚀 Features
