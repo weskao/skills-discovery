@@ -144,9 +144,13 @@ Score each remaining candidate (0–10):
 
 Sort descending by score; break ties by stars descending, then by `name` ascending (case-insensitive). (The explicit tie-break matters: keyword runs often produce many same-score candidates, and without it two agents would pick different cutoffs.)
 
-**Cross-track dedup (before the cutoff):** a repo may appear in only one track per report. If the same `owner/repo` (from `source`) appears in both tracks' scored sets, drop the tools-track copy and keep the skills-track entry. Keyword runs query both tracks with the same string, so without this rule the report shows the same repo twice under different numbers.
+Apply the cutoffs in this order — a repo may appear in only one track per report:
 
-Then keep top 6 skills + top 4 tools = 10 candidates max.
+1. Keep the top 6 skills-track candidates.
+2. **Cross-track dedup:** drop any tools-track candidate whose `owner/repo` (from `source`) matches one of those kept top-6 skills entries. Compare against the **kept** skills only, not the full scored set — keyword runs query both tracks with the same string, and deduping against the full set would always annihilate the entire tools track.
+3. Keep the top 4 remaining tools-track candidates.
+
+Result: 10 candidates max, no repo shown twice under different numbers.
 
 **Refresh known entries from search results.** For every entry in `KNOWN_SKILL_ENTRIES` / `KNOWN_TOOL_ENTRIES`, attempt to find a matching raw search result from Steps 2–3 (regardless of whether it made the top-6/4 cutoff) using the following two-pass lookup:
 
