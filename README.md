@@ -66,7 +66,13 @@ The first time you run `/skills-discovery`, Step 0 auto-creates `<project-home>/
 | Required | Used for | If missing |
 | --- | --- | --- |
 | Claude Code (or compatible host) | Runs the skill | n/a |
-| `mcp__github__*` MCP tools | GitHub search & file fetch | Discovery cannot run |
+| [`github-mcp-server`](https://github.com/github/github-mcp-server) MCP **or** `gh` CLI | GitHub search & file fetch — pick one (see note below) | Discovery cannot run |
+| `jq` CLI | Parsing: required for `gh`-path; also used when MCP results overflow to a file | `gh`-path blocked without it; MCP-path falls back to slower subagent parsing — [install jq](https://jqlang.github.io/jq/download/):<br>• macOS: `brew install jq`<br>• Linux: `apt install jq`<br>• Windows: `winget install jqlang.jq` |
+
+> **GitHub access paths compared:**
+>
+> - **`github-mcp-server` MCP** — returns structured JSON directly; `jq` only needed if results overflow to a file.
+> - **`gh` CLI** — equivalent coverage (`gh search repos` / `gh api repos/{owner}/{repo}/contents/{path}`), but requires `jq` to parse every response.
 
 ## 📣 Telegram notifications (delivery options)
 
@@ -84,10 +90,11 @@ If you use [openclaw](https://github.com/openclaw/openclaw), the skill sends via
 
 ### Option 3 — Roll your own `tg_send`
 
-If you have neither of the above, define a small zsh function and the fallback chain will use it:
+If you have neither of the above, define a `tg_send` shell function and the fallback chain will use it:
 
-```zsh
-# Add to ~/.zshrc — requires TG_BOT_TOKEN and TG_CHAT_ID env vars
+```bash
+# macOS / Linux / Windows WSL — add to ~/.bashrc or ~/.zshrc
+# Requires TG_BOT_TOKEN and TG_CHAT_ID env vars
 tg_send() {
   curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
     --data-urlencode "chat_id=${TG_CHAT_ID}" \
@@ -214,6 +221,8 @@ Pair with a `/schedule` skill (if your host provides one) or any cron mechanism 
 0 9 * * *   openclaw /skills-discovery     # openclaw
 0 9 * * *   hermes /skills-discovery       # hermes
 ```
+
+> **Windows:** use Task Scheduler (`taskschd.msc`) or `schtasks /create /tn "SkillsDiscovery" /tr "claude /skills-discovery" /sc daily /st 09:00` to run on the same schedule.
 
 A morning report keeps your skill library fresh without you having to remember.
 

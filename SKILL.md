@@ -87,7 +87,12 @@ For each keyword in `watchlist.skill_keywords`: call `mcp__github__search_reposi
 
 For each org in `watchlist.orgs`: list contents via `mcp__github__get_file_contents` to find subdirectories containing `SKILL.md`. Skip directories whose name is already in `KNOWN_SKILLS`.
 
-For each found skill, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows:
+For each found skill, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows.
+
+> **When MCP results overflow to file:** if `mcp__github__search_repositories` returns a tool-results file (result too large for context), parse it with `jq` — never with `python3 -c` (may be blocked by deny rules):
+> ```bash
+> jq -r '.items[] | [.full_name, (.stargazers_count|tostring), (.description // ""), (.topics // [] | join(","))] | @tsv' <path>
+> ```
 
 - `name` — directory or repo name (from `name` or `full_name` suffix of the **same result object**)
 - `source` — `github:<full_name>[/subpath]` derived from the **same result object's `full_name`**
@@ -113,7 +118,7 @@ For each keyword in `watchlist.tool_keywords`: call `mcp__github__search_reposit
 
 For each awesome list in `watchlist.awesome_lists`: fetch the README via `mcp__github__get_file_contents`, parse out repo links, keep entries that look like agent frameworks / coding agents / workflow tools.
 
-For each found tool, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows:
+For each found tool, extract fields **per-repo, in a single pass over the same result object** — never mix fields from different rows. When results overflow to file, use the same `jq` command as Step 2.
 
 - `name` — from `name` or `full_name` suffix of the **same result object**
 - `source` — `github:<full_name>` from the **same result object's `full_name`**
