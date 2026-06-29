@@ -105,6 +105,35 @@ The skill is **designed to degrade gracefully**:
 - **A failed delivery is logged** to `<project-home>/log/skills-discovery.log` rather than crashing the run.
 - **Mode B (install via reply) becomes manual.** Instead of replying on Telegram, re-invoke the skill with explicit indices — e.g. ask Claude: *"From `<project-home>/skill-candidates.yaml`, install candidates 1, 3, and 5."*
 
+## 🚦 Usage
+
+### Invoking the skill
+
+```text
+/skills-discovery
+/skills-discovery <keyword>
+```
+
+| Invocation | What happens |
+| --- | --- |
+| `/skills-discovery` | Full discovery run — searches all watchlist topics, orgs, keywords, and awesome lists, then surfaces a top-10 shortlist. |
+| `/skills-discovery memory` | Scoped discovery — searches GitHub for `memory` only (watchlist loops skipped). Useful for exploring a specific domain without waiting for the full sweep. |
+
+The keyword can be any term: a technology (`flutter`), a concept (`agent`), or a feature area (`workflow`). Steps 4–6 (scoring, candidates file, Telegram report) run identically regardless.
+
+### Responding to a discovery report
+
+After a report arrives on Telegram, reply with one of the following commands. The same commands also work when invoking the skill manually via Claude if Telegram is unavailable (see [Skip Telegram entirely](#option-4--skip-telegram-entirely)).
+
+| Reply | Effect |
+| --- | --- |
+| `install 1 3 5` | Install the skills at positions ①③⑤. Tools-track entries (even-numbered ⑦–⑩ style) are tracked in the registry but not cloned — they are external tools the user evaluates independently. |
+| `install all` | Install every skill candidate and track every tool candidate in the current report. |
+| `skip all` | Discard the candidate file without installing anything. Skipped candidates are not added to the registry, so the next discovery run may re-surface them. |
+| `details 2` | Fetch and display the full `SKILL.md` (skills) or `README.md` (tools) for candidate ②. Does not install. |
+
+> **Without Telegram:** ask Claude directly — e.g. *"From `~/.claude/skill-candidates.yaml`, install candidates 1 and 3."*
+
 ## ⚙️ How it works
 
 ### Mode A — Discovery (read-only on registry)
