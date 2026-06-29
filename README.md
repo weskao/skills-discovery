@@ -66,7 +66,7 @@ The first time you run `/skills-discovery`, Step 0 auto-creates `<project-home>/
 | Required | Used for | If missing |
 | --- | --- | --- |
 | Claude Code (or compatible host) | Runs the skill | n/a |
-| [`github-mcp-server`](https://github.com/github/github-mcp-server) MCP **or** `gh` CLI | GitHub search & file fetch — pick one (see note below) | Discovery cannot run |
+| [`github-mcp-server`](https://github.com/github/github-mcp-server) MCP **or** `gh` CLI | GitHub search & file fetch — pick one (see note below) | Discovery cannot run — install one:<br>• MCP: add `github-mcp-server` via your host's MCP settings<br>• `gh` CLI ([full install docs](https://github.com/cli/cli#installation)):<br>&nbsp;&nbsp;macOS `brew install gh`<br>&nbsp;&nbsp;Linux `sudo apt install gh`<br>&nbsp;&nbsp;Windows `winget install GitHub.cli` |
 | `jq` CLI | Parsing: required for `gh`-path; also used when MCP results overflow to a file | `gh`-path blocked without it; MCP-path falls back to slower subagent parsing — [install jq](https://jqlang.github.io/jq/download/):<br>• macOS: `brew install jq`<br>• Linux: `apt install jq`<br>• Windows: `winget install jqlang.jq` |
 
 > **GitHub access paths compared:**
