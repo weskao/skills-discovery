@@ -77,6 +77,27 @@ These follow the same "defined in more than one place" hazard — keep them alig
 - **`<SKILL_HOME>` vs `<project-home>`**: `SKILL.md` uses `<SKILL_HOME>`, `README.md`
   uses `<project-home>` — they mean the same thing. Keep the terminology mapping intact.
 
+## ⚠️ The index invariant
+
+**An entry's `index` in `skill-candidates.yaml` must equal its circled number in the
+Telegram report.** Mode B resolves `install <n>` by looking up index `n` in the file, so
+the moment those two drift an approved install clones a repo the user never saw — and
+every validation check still passes, because the index is well-formed, just wrong.
+
+Three spec clauses hold the invariant up. Changing any one alone breaks it:
+
+| Clause | Where | Role |
+| --- | --- | --- |
+| Tier 1 sorts first | `SKILL.md` Step 5 sub-step 4 | Puts this run's shortlist at indices 1..10 |
+| Whole-file rewrite | `SKILL.md` Step 5 sub-step 6 | Every retained entry re-emits `index` + `track` |
+| Report displays Tier 1 | `SKILL.md` Step 6 | The visible ①..⑩ are exactly indices 1..10 |
+
+The observed failure mode (2026-08): a run wrote `index`/`track` on the 9 entries it
+touched and left 219 carried-over entries bare. Indices then read `1..6, 166, 178, 179`,
+so `install 7` resolved to position 7 — an unrelated Flutter skill — rather than the tool
+displayed at ⑦. If you relax the 60-entry retention cap the whole-file rewrite becomes
+impractical again and this recurs: the cap is a correctness control, not tidiness.
+
 ## Repo conventions
 
 - **`SKILL.md` is an executable spec.** Every step must be deterministic enough that two

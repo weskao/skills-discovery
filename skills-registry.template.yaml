@@ -36,7 +36,7 @@ skills:
 
 # ─── Tools track: non-skill resources (agent frameworks, coding agents, etc.) ─
 # These are NOT installed as Claude skills — they're external tools that
-# augment the production pipeline. Listed here so the daily discovery agent
+# augment the production pipeline. Listed here so the discovery agent
 # can diff them against new findings and avoid re-surfacing known ones.
 
 tools:
@@ -47,7 +47,7 @@ tools:
   security_tooling: []      # SAST/DAST, vulnerability scanners, pentest aids, CTF tools
   claude_automation: []     # reusable hooks, workflow scripts, slash commands, Claude Code extensions
 
-# ─── Watchlist: GitHub orgs/repos to poll for new skills each day ─────────────
+# ─── Watchlist: GitHub orgs/repos to poll for new skills ──────────────────────
 # Edit freely to match your interests. The defaults below are a general
 # starting point — add or remove orgs, topics, and keywords as you discover
 # new sources.

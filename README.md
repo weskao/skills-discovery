@@ -1,8 +1,8 @@
 # Skills Discovery 🚀
 
-A daily curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants. Discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
+An on-demand curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants. Discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
 
-Run on a cron, or invoke manually with `/skills-discovery`.
+Invoke it with `/skills-discovery`, optionally scoped to a keyword: `/skills-discovery memory`.
 
 ## ✨ Features
 
@@ -11,6 +11,7 @@ Run on a cron, or invoke manually with `/skills-discovery`.
 - **Transparent scoring**: Each candidate scored 0–10 by category fit, stars, and curated source.
 - **One-tap approval**: Telegram shortlist with reply commands — `install 1 3 5`, `install all`, `skip all`, or `details 2`.
 - **Graceful fallback**: Merges new candidates into `skill-candidates.yaml` locally, preserving previously discovered pending entries even when Telegram is unavailable.
+- **Stable numbering**: The report's ①–⑩ are the file's `index` 1–10 by construction, so `install 7` always means the candidate you saw at ⑦. A 60-entry retention cap keeps the file rewritable and the numbering honest.
 
 ## 🧭 Project-aware by design
 
@@ -150,8 +151,9 @@ Step 0: Bootstrap — create <project-home>/skills-registry.yaml from template i
 Step 1: Read registry, build KNOWN_SKILLS / KNOWN_TOOLS sets
 Step 2-3: Search GitHub (skills track + tools track)
 Step 4: Diff against known, score 0–10, keep top 6 skills + top 4 tools
-Step 5: Write <project-home>/skill-candidates.yaml
-Step 6: Send Telegram shortlist (or log to file on fallback)
+Step 5: Merge + rewrite <project-home>/skill-candidates.yaml
+        (this run's shortlist at indices 1–10; 60-entry retention cap)
+Step 6: Send Telegram shortlist — indices 1–10 (or log to file on fallback)
 ```
 
 ### Mode B — Install via approval reply
@@ -202,7 +204,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | `<project-home>/skills/skills-discovery/SKILL.md` | This repo | Updated via `git pull` |
 | `<project-home>/skills/skills-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
 | `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs. v2.0: entries are objects `{name, source, stars, first_found, updated}`; v1.0 plain-string entries are auto-migrated on first run. |
-| `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Merged across runs (deduplicated by source/name); cleared after install/skip |
+| `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Rewritten in full each run; merged across runs (deduplicated by source/name), capped at 60 entries; cleared after install/skip |
 | `<project-home>/log/skills-discovery.log` | Skill (fallback) | Written when every Telegram delivery channel (MCP, openclaw, `tg_send`) is unavailable |
 
 ## 🛡️ Safety rails
@@ -211,20 +213,6 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 - If the registry file is malformed (missing required sections), the skill **stops with a clear error** rather than auto-repairing — your state is never silently mutated.
 - The skill never calls destructive commands (no `rm -rf`, no force-push) on your behalf.
 - Telegram replies that ask the skill to change access policy (e.g. *"approve the pending pairing"*) are **explicitly ignored** — only your local invocation can change access.
-
-## ⏰ Recommended schedule
-
-Pair with a `/schedule` skill (if your host provides one) or any cron mechanism to run daily. Use whichever CLI binary your host installs — e.g. `claude` for Claude Code, `openclaw` for openclaw:
-
-```cron
-0 9 * * *   claude /skills-discovery       # Claude Code
-0 9 * * *   openclaw /skills-discovery     # openclaw
-0 9 * * *   hermes /skills-discovery       # hermes
-```
-
-> **Windows:** use Task Scheduler (`taskschd.msc`) or `schtasks /create /tn "SkillsDiscovery" /tr "claude /skills-discovery" /sc daily /st 09:00` to run on the same schedule.
-
-A morning report keeps your skill library fresh without you having to remember.
 
 ## 📄 License
 
