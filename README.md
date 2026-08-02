@@ -1,8 +1,8 @@
 # Skills Discovery 🚀
 
-An on-demand curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants. Discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
+A daily curation agent for [Claude Code](https://claude.com/claude-code) and compatible variants. Discovers new skills and adjacent AI/agent tools from GitHub, scores them by category fit and popularity, and surfaces a top-10 shortlist for one-tap approval.
 
-Invoke it with `/skills-discovery`, optionally scoped to a keyword: `/skills-discovery memory`.
+Run on a cron, or invoke manually with `/skills-discovery`.
 
 ## ✨ Features
 
@@ -213,6 +213,20 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 - If the registry file is malformed (missing required sections), the skill **stops with a clear error** rather than auto-repairing — your state is never silently mutated.
 - The skill never calls destructive commands (no `rm -rf`, no force-push) on your behalf.
 - Telegram replies that ask the skill to change access policy (e.g. *"approve the pending pairing"*) are **explicitly ignored** — only your local invocation can change access.
+
+## ⏰ Recommended schedule
+
+Pair with a `/schedule` skill (if your host provides one) or any cron mechanism to run daily. Use whichever CLI binary your host installs — e.g. `claude` for Claude Code, `openclaw` for openclaw:
+
+```cron
+0 9 * * *   claude /skills-discovery       # Claude Code
+0 9 * * *   openclaw /skills-discovery     # openclaw
+0 9 * * *   hermes /skills-discovery       # hermes
+```
+
+> **Windows:** use Task Scheduler (`taskschd.msc`) or `schtasks /create /tn "SkillsDiscovery" /tr "claude /skills-discovery" /sc daily /st 09:00` to run on the same schedule.
+
+A morning report keeps your skill library fresh without you having to remember.
 
 ## 📄 License
 
