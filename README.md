@@ -10,7 +10,7 @@ Invoke it with `/skills-discovery`, optionally scoped to a keyword: `/skills-dis
 - **Smart de-duplication**: Diffs findings against your local registry so already-known items are skipped.
 - **Transparent scoring**: Each candidate scored 0–10 by category fit, stars, and curated source.
 - **One-tap approval**: Telegram shortlist with reply commands — `install 1 3 5`, `install all`, `skip all`, or `details 2`.
-- **Graceful fallback**: Merges new candidates into `skill-candidates.yaml` locally, preserving previously discovered pending entries even when Telegram is unavailable.
+- **Graceful fallback**: Merges new candidates into `skill-candidates.yaml` locally, carrying previously discovered pending entries forward (up to the 60-entry cap) even when Telegram is unavailable.
 - **Stable numbering**: The report's ①–⑩ are the file's `index` 1–10 by construction, so `install 7` always means the candidate you saw at ⑦. A 60-entry retention cap keeps the file rewritable and the numbering honest.
 
 ## 🧭 Project-aware by design

@@ -88,9 +88,15 @@ Three spec clauses hold the invariant up. Changing any one alone breaks it:
 
 | Clause | Where | Role |
 | --- | --- | --- |
-| Tier 1 sorts first | `SKILL.md` Step 5 sub-step 4 | Puts this run's shortlist at indices 1..10 |
-| Whole-file rewrite | `SKILL.md` Step 5 sub-step 6 | Every retained entry re-emits `index` + `track` |
-| Report displays Tier 1 | `SKILL.md` Step 6 | The visible ①..⑩ are exactly indices 1..10 |
+| Tier 1 sorts first | `SKILL.md` Step 5 sub-step 4 | Puts this run's shortlist at indices 1..`shortlist_count` |
+| Whole-file rewrite | `SKILL.md` Step 5 sub-step 6 | Every retained entry re-emits `index` + `track`; the file records `shortlist_count` |
+| Report displays Tier 1 | `SKILL.md` Step 6 | The visible ①..ⓝ are exactly indices 1..`shortlist_count` |
+
+`shortlist_count` exists because Tier 1 is otherwise unrecoverable from the artifact:
+sub-step 3 refreshes carried-over entries to `last_seen: today` too, so that field cannot
+mark the boundary. Anything that reads the file after the run — Step 6, Mode B's
+`install all` — needs the count written down. Don't drop it as redundant just because a
+full shortlist happens to be 10.
 
 The observed failure mode (2026-08): a run wrote `index`/`track` on the 9 entries it
 touched and left 219 carried-over entries bare. Indices then read `1..6, 166, 178, 179`,
