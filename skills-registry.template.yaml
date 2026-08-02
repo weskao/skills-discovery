@@ -56,7 +56,7 @@ watchlist:
 
   # --- Skills track ---
   orgs:
-    - flutter/skills                          # official Flutter skills
+    - flutter/agent-plugins                   # official Flutter skills (renamed from flutter/skills)
     - nextlevelbuilder/ui-ux-pro-max-skill    # UI/UX suite
     - alchaincyf                              # mindset/persona skills
     - davila7/claude-code-templates           # general templates
