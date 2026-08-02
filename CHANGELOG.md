@@ -1,8 +1,32 @@
+## [0.10.0] - 2026-08-02
+
+### 🐛 Bug Fixes
+
+- **spec:** Record shortlist_count so `install all` can't reach past the report
+
+### 🚜 Refactor
+
+- **skill:** [**breaking**] Drop cron framing and fix the candidates index invariant
+
+### 📚 Documentation
+
+- **readme:** Add usage section with invocation examples and reply commands
+- Clarify gh cli / jq support and split platform install instructions
+- **readme:** Expand install instructions for gh cli missing dependency
+- **readme:** Restore cron scheduling documentation
+
+### ⚙️ Miscellaneous Tasks
+
+- **watchlist:** Repoint flutter org to agent-plugins rename
 ## [0.9.2] - 2026-06-10
 
 ### 🐛 Bug Fixes
 
 - **spec:** Cross-track dedup compares against kept top-6, not full scored set
+
+### ⚙️ Miscellaneous Tasks
+
+- **release:** Bump version to v0.9.2
 ## [0.9.1] - 2026-06-09
 
 ### 🐛 Bug Fixes
