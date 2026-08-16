@@ -63,6 +63,7 @@ watchlist:
     - orchestra-research/ai-research-skills   # research/data skills
     - openclaw/skills                         # community marketplace
     - forrestchang/andrej-karpathy-skills     # coding guidelines
+    - mattpocock                               # TypeScript/AI tooling (Matt Pocock)
 
   github_topics:
     - claude-skill
