@@ -120,14 +120,18 @@ The skill is **designed to degrade gracefully**:
 ```text
 /skills-discovery
 /skills-discovery <keyword>
+/skills-discovery remove <name>
 ```
 
 | Invocation | What happens |
 | --- | --- |
 | `/skills-discovery` | Full discovery run — searches all watchlist topics, orgs, keywords, and awesome lists, then surfaces a top-10 shortlist. |
 | `/skills-discovery memory` | Scoped discovery — searches GitHub for `memory` only (watchlist loops skipped). Useful for exploring a specific domain without waiting for the full sweep. |
+| `/skills-discovery remove flutter-helper` | Uninstalls `flutter-helper` — deletes `<project-home>/skills/flutter-helper/` and its `skills-registry.yaml` entry, after confirmation. Terminal-only; not a Telegram command. |
 
 The keyword can be any term: a technology (`flutter`), a concept (`agent`), or a feature area (`workflow`). Steps 4–6 (scoring, candidates file, Telegram report) run identically regardless.
+
+> **Not covered here:** pulling fresh code into an already-installed skill. That's the `update-skills` skill's job — this skill only ever refreshes a known entry's star count, never its content.
 
 ### Responding to a discovery report
 
