@@ -1,3 +1,12 @@
+## [0.11.0] - 2026-08-17
+
+### 🚀 Features
+
+- **skill:** Add terminal-only remove mode and stale-entry detection
+
+### ⚙️ Miscellaneous Tasks
+
+- Add mattpocock to watchlist
 ## [0.10.0] - 2026-08-02
 
 ### 🐛 Bug Fixes
@@ -18,6 +27,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - **watchlist:** Repoint flutter org to agent-plugins rename
+- **release:** Bump version to 0.10.0
 ## [0.9.2] - 2026-06-10
 
 ### 🐛 Bug Fixes
