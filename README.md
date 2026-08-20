@@ -7,7 +7,7 @@ Run on a cron, or invoke manually with `/skills-discovery`.
 ## ✨ Features
 
 - **Curated sources**: Polls GitHub orgs, topics, and "awesome" lists known to publish quality skills.
-- **Smart de-duplication**: Diffs findings against your local registry so already-known items are skipped.
+- **Smart de-duplication**: Skips registry entries, skill directories already on disk, and installed plugins — even if they were installed outside this skill.
 - **Transparent scoring**: Each candidate scored 0–10 by category fit, stars, and curated source.
 - **One-tap approval**: Telegram shortlist with reply commands — `install 1 3 5`, `install all`, `skip all`, or `details 2`.
 - **Graceful fallback**: Merges new candidates into `skill-candidates.yaml` locally, carrying previously discovered pending entries forward (up to the 60-entry cap) even when Telegram is unavailable.
@@ -127,7 +127,7 @@ The skill is **designed to degrade gracefully**:
 | --- | --- |
 | `/skills-discovery` | Full discovery run — searches all watchlist topics, orgs, keywords, and awesome lists, then surfaces a top-10 shortlist. |
 | `/skills-discovery memory` | Scoped discovery — searches GitHub for `memory` only (watchlist loops skipped). Useful for exploring a specific domain without waiting for the full sweep. |
-| `/skills-discovery remove flutter-helper` | Uninstalls `flutter-helper` — deletes `<project-home>/skills/flutter-helper/` and its `skills-registry.yaml` entry, after confirmation. Terminal-only; not a Telegram command. |
+| `/skills-discovery remove flutter-helper` | After terminal confirmation, removes the installed skill directory and its `skills-registry.yaml` entry. Terminal-only; Telegram replies cannot remove anything. |
 
 The keyword can be any term: a technology (`flutter`), a concept (`agent`), or a feature area (`workflow`). Steps 4–6 (scoring, candidates file, Telegram report) run identically regardless.
 
@@ -139,7 +139,7 @@ After a report arrives on Telegram, reply with one of the following commands. Th
 
 | Reply | Effect |
 | --- | --- |
-| `install 1 3 5` | Install the skills at positions ①③⑤. Tools-track entries (even-numbered ⑦–⑩ style) are tracked in the registry but not cloned — they are external tools the user evaluates independently. |
+| `install 1 3 5` | Install the selected skills at the report positions. A selected tools-track entry is recorded as evaluated but is never cloned; external tools remain your separate decision. |
 | `install all` | Install every skill candidate and track every tool candidate in the current report. |
 | `skip all` | Discard the candidate file without installing anything. Skipped candidates are not added to the registry, so the next discovery run may re-surface them. |
 | `details 2` | Fetch and display the full `SKILL.md` (skills) or `README.md` (tools) for candidate ②. Does not install. |
@@ -152,13 +152,30 @@ After a report arrives on Telegram, reply with one of the following commands. Th
 
 ```text
 Step 0: Bootstrap — create <project-home>/skills-registry.yaml from template if missing
-Step 1: Read registry, build KNOWN_SKILLS / KNOWN_TOOLS sets
+Step 1: Read registry and installed state, build known-item sets
 Step 2-3: Search GitHub (skills track + tools track)
 Step 4: Diff against known, score 0–10, keep top 6 skills + top 4 tools
 Step 5: Merge + rewrite <project-home>/skill-candidates.yaml
         (this run's shortlist at indices 1–10; 60-entry retention cap)
 Step 6: Send Telegram shortlist — indices 1–10 (or log to file on fallback)
 ```
+
+### What is filtered, and why
+
+Before scoring, the skill removes duplicates in the smallest useful scope:
+
+- A skills-track result is excluded when its **name** is already in `skills-registry.yaml`, a directory already exists at `<project-home>/skills/<name>/`, or it is listed in `plugins/installed_plugins.json`. This includes skills installed manually or with `claude plugin install`.
+- A tools-track result is excluded when its name is already in the registry's `tools:` section. Tools are tracked rather than installed.
+- Within one report, a tools result is excluded when it points to the same GitHub `owner/repo` as one of the kept skill results. The same repository is therefore not presented twice in two tracks.
+- The pending candidates file is merged by GitHub source first and name second, so a rediscovered pending item is refreshed instead of duplicated. It keeps at most 60 pending entries; the newest report's entries always come first.
+
+Registry entries whose installed skill directory or plugin is now missing are reported as **stale**. They are never removed automatically; use the terminal-only `remove <name>` command if that cleanup is intended.
+
+### How candidates are selected
+
+The skill searches the configured GitHub topics, organizations, keywords, and awesome lists. `/skills-discovery <keyword>` replaces those loops with one keyword search, but does not discard candidates found by previous runs.
+
+Each valid result is categorized and scored: +4 for an interested category, +1–3 for stars, +1 for a curated source, -2 for `other`, and -3 when the expected `SKILL.md`/`README.md` is absent. Results are sorted by score, stars, then name; the report keeps up to six skills and four tools. Repository names and summaries are validated and sanitized before they are saved or displayed.
 
 ### Mode B — Install via approval reply
 
@@ -170,9 +187,15 @@ Skill: clear <project-home>/skill-candidates.yaml
 Skill: reply ✅ summary
 ```
 
+`install all` means only the entries displayed in the latest report, not every carried-over pending entry. Candidate indices are validated before an install, so a malformed or stale candidates file is refused rather than targeting the wrong repository.
+
+### Mode C — Remove an installed skill
+
+`/skills-discovery remove <name>` is separate from discovery and Telegram replies. It validates the name, shows exactly what will be removed, and waits for terminal confirmation. It removes only a matching installed skill and registry entry. A tracked tool cannot be removed this way because tools were never cloned.
+
 ## 🛠️ Customization
 
-Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
+Edit `<project-home>/skills-registry.yaml` to tune what gets discovered. This is your active default list: it is created from the bundled `skills-registry.template.yaml` on the first run, then preserved. Editing the template later only changes fresh installations; it does not rewrite an existing registry.
 
 | Track  | Default categories                                                                                                      |
 |--------|-------------------------------------------------------------------------------------------------------------------------|
@@ -185,6 +208,8 @@ Edit `<project-home>/skills-registry.yaml` to tune what gets discovered:
 - `watchlist.tool_keywords` — free-text keywords for the tools track
 - `watchlist.awesome_lists` — curated lists to parse
 - `watchlist.categories_of_interest` — categories that get a +4 scoring boost
+
+To add a source, add an organization, topic, keyword, or `github:owner/repo` awesome list under `watchlist`. To stop prioritizing a type of result, remove its category from the appropriate `*_categories_of_interest` list. The `skills:` and `tools:` sections are the persistent known-item lists; normally the skill appends approved entries there, so edit them only when you deliberately want to pre-mark or untrack an item.
 
 Your manual edits to `watchlist` are preserved — the skill only ever **appends** to the `skills:` and `tools:` sections, never to `watchlist`.
 
