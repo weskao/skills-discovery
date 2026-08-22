@@ -1,8 +1,21 @@
+## [0.12.0] - 2026-08-22
+
+### 🚀 Features
+
+- **skill:** Add shortlist snapshots and guards
+
+### 📚 Documentation
+
+- **readme:** Clarify discovery behavior
 ## [0.11.0] - 2026-08-17
 
 ### 🚀 Features
 
 - **skill:** Add terminal-only remove mode and stale-entry detection
+
+### 📚 Documentation
+
+- **changelog:** Release v0.11.0
 
 ### ⚙️ Miscellaneous Tasks
 
