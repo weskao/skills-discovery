@@ -77,12 +77,42 @@ These follow the same "defined in more than one place" hazard — keep them alig
 - **`<SKILL_HOME>` vs `<project-home>`**: `SKILL.md` uses `<SKILL_HOME>`, `README.md`
   uses `<project-home>` — they mean the same thing. Keep the terminology mapping intact.
 
-## ⚠️ The index invariant
+## ⚠️ The snapshot invariant (how report numbers stay meaningful)
 
-**An entry's `index` in `skill-candidates.yaml` must equal its circled number in the
-Telegram report.** Mode B resolves `install <n>` by looking up index `n` in the file, so
-the moment those two drift an approved install clones a repo the user never saw — and
-every validation check still passes, because the index is well-formed, just wrong.
+**Every delivered report must have a matching write-once
+`log/shortlist-<run_id>.yaml`, and Mode B must resolve `install <n>` against that
+snapshot — not against `skill-candidates.yaml`.**
+
+The pool file is *shared and renumbered by every run*. Two facts follow, and both have
+bitten in production:
+
+1. Two runs racing on the pool lose each other's writes (Step 5 sub-step 6's
+   `BASE_GENERATED_AT` re-read exists for this).
+2. Even with no race, a report goes stale the moment the *next* run rewrites the pool.
+   Index 1 now belongs to that run's shortlist. A user answering yesterday's report
+   installs today's candidate — and nothing detects it, because the index is
+   well-formed, merely answered by the wrong document.
+
+No amount of locking fixes (2): the report is already sent and immutable, so the list it
+refers to must be immutable too. That is the snapshot. Keep these three clauses aligned:
+
+| Clause | Where | Role |
+| --- | --- | --- |
+| Snapshot written before sending | `SKILL.md` Step 6, first block | Freezes exactly what the report shows |
+| `run:` line in the report footer | `SKILL.md` Step 6 format block | Lets a reply name its own snapshot |
+| Reply resolved via `RESOLVED_LIST` | `SKILL.md` Mode B Step 0a | Snapshot first, newest snapshot second, pool last |
+
+Never make snapshots mutable "to save space" — pruning to the last 10 is the only
+permitted deletion. Rewriting one retroactively changes what a past report is understood
+to have said.
+
+## ⚠️ The index invariant (pool file — the fallback path)
+
+**An entry's `index` in `skill-candidates.yaml` must equal its position in that file's
+canonical order, and indices 1..`shortlist_count` must be that run's shortlist.** This is
+no longer the primary resolution path, but it is still the fallback Mode B Step 0a takes
+for reports older than the retained snapshots — so it must stay correct, and every
+validation check still passes when it isn't.
 
 Three spec clauses hold the invariant up. Changing any one alone breaks it:
 
@@ -103,6 +133,41 @@ touched and left 219 carried-over entries bare. Indices then read `1..6, 166, 17
 so `install 7` resolved to position 7 — an unrelated Flutter skill — rather than the tool
 displayed at ⑦. If you relax the 60-entry retention cap the whole-file rewrite becomes
 impractical again and this recurs: the cap is a correctness control, not tidiness.
+
+## ⚠️ The identity invariant
+
+**A repository's identity is `owner/repo`, never its bare `name`.** Different authors
+publish same-named repos routinely (a single 2026-08 keyword run surfaced two distinct
+`facebook-ads-library-mcp` repos). Name-keyed logic fails in both directions: it hides a
+genuinely new repo behind a known one's name, and it lets a true duplicate through under
+a different name.
+
+Where this must hold:
+
+- Step 1 builds `KNOWN_SOURCES` from every entry's `source`; Step 4 diffs on it.
+- The `name` test survives *only* as the "install path already taken" check — that one is
+  genuinely name-keyed, because `<SKILL_HOME>/skills/<name>/` is.
+- Mode B guards the clone path before every install. Two same-named candidates, or one
+  name already used by a manual install, must never result in a clone into an existing
+  directory.
+- Step 4 disambiguates same-name survivors to `name (owner)` for **display only**. The
+  stored `name` stays path-safe — never write the disambiguated form to `name`.
+
+## ⚠️ Track assignment is by evidence, not by search batch
+
+Steps 2 and 3 originally ran the *same* query in keyword mode and split results by which
+batch they came from, so a repo's track was an accident of ordering. MCP servers and
+libraries landed in the skills track, where the `-3` no-`SKILL.md` penalty then punished
+them for not being what they never claimed to be.
+
+Step 1b is the fix: search once (with the fixed query expansion), then assign a track by
+looking for a root `SKILL.md` / `skills/` / `skill/` / `.claude-plugin/`. Two consequences
+to preserve when editing:
+
+- **Never add non-deterministic query expansion** (synonyms, model-invented aliases). The
+  spec's contract is that two agents given one keyword issue identical queries.
+- **Cross-track dedup must stay skipped in keyword mode.** Step 1b already guarantees
+  disjoint tracks; running the dedup anyway deletes valid tools entries.
 
 ## Repo conventions
 

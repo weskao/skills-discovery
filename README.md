@@ -89,6 +89,8 @@ If you have the `telegram` MCP plugin and run the skill inside a Telegram-channe
 
 If you use [openclaw](https://github.com/openclaw/openclaw), the skill sends via `openclaw message send`, reading your chat id from `<project-home>/channels/telegram/access.json` (created by openclaw's `/telegram:access` pairing flow). Requires the `openclaw` CLI on `PATH` or in a standard node install location.
 
+openclaw refuses to start on a `node` outside its supported range, which the *current* `node` on a machine often is. The skill therefore probes your installed node versions and uses the first one openclaw actually accepts; if none do, it falls through to the next delivery option instead of failing the run. This matters most for unattended cron runs, where a shell error would otherwise swallow the report.
+
 ### Option 3 — Roll your own `tg_send`
 
 If you have neither of the above, define a `tg_send` shell function and the fallback chain will use it:
@@ -144,6 +146,8 @@ After a report arrives on Telegram, reply with one of the following commands. Th
 | `skip all` | Discard the candidate file without installing anything. Skipped candidates are not added to the registry, so the next discovery run may re-surface them. |
 | `details 2` | Fetch and display the full `SKILL.md` (skills) or `README.md` (tools) for candidate ②. Does not install. |
 
+Numbers refer to the report you are replying to, not to whatever ran most recently — each report carries a `run:` id and is resolved against its own frozen snapshot. Replying to an older report is safe.
+
 > **Without Telegram:** ask Claude directly — e.g. *"From `~/.claude/skill-candidates.yaml`, install candidates 1 and 3."*
 
 ## ⚙️ How it works
@@ -151,43 +155,53 @@ After a report arrives on Telegram, reply with one of the following commands. Th
 ### Mode A — Discovery (read-only on registry)
 
 ```text
-Step 0: Bootstrap — create <project-home>/skills-registry.yaml from template if missing
-Step 1: Read registry and installed state, build known-item sets
+Step 0:  Bootstrap — create <project-home>/skills-registry.yaml from template if missing
+Step 1:  Read registry and installed state, build known-item sets
+Step 1b: Keyword runs only — expanded search, then assign each repo a track by evidence
 Step 2-3: Search GitHub (skills track + tools track)
-Step 4: Diff against known, score 0–10, keep top 6 skills + top 4 tools
-Step 5: Merge + rewrite <project-home>/skill-candidates.yaml
-        (this run's shortlist at indices 1–10; 60-entry retention cap)
-Step 6: Send Telegram shortlist — indices 1–10 (or log to file on fallback)
+Step 4:  Diff against known, score 0–10, drop anything below MIN_SCORE (3),
+         keep top 6 skills + top 4 tools
+Step 5:  Merge + rewrite <project-home>/skill-candidates.yaml
+         (this run's shortlist at indices 1–10; 60-entry retention cap;
+          re-reads the file before writing so a concurrent run isn't clobbered)
+Step 6:  Freeze the shortlist to log/shortlist-<run_id>.yaml, then send it
+         (or log to file on fallback)
 ```
 
 ### What is filtered, and why
 
 Before scoring, the skill removes duplicates in the smallest useful scope:
 
-- A skills-track result is excluded when its **name** is already in `skills-registry.yaml`, a directory already exists at `<project-home>/skills/<name>/`, or it is listed in `plugins/installed_plugins.json`. This includes skills installed manually or with `claude plugin install`.
-- A tools-track result is excluded when its name is already in the registry's `tools:` section. Tools are tracked rather than installed.
-- Within one report, a tools result is excluded when it points to the same GitHub `owner/repo` as one of the kept skill results. The same repository is therefore not presented twice in two tracks.
+- A result is excluded when its GitHub **`owner/repo`** is already recorded in `skills-registry.yaml`. Repository identity, not the bare name, is the primary test — different authors publish same-named repos, so name-only matching would both hide genuinely new repos and let real duplicates through.
+- A result is *additionally* excluded when its **name** is already taken: an entry in the registry, a directory at `<project-home>/skills/<name>/`, or a key in `plugins/installed_plugins.json`. This covers skills installed manually or with `claude plugin install`, and it prevents offering a skill that could not be cloned without overwriting one you already have.
+- Anything scoring below **`MIN_SCORE` (3)** is dropped before the top-6/top-4 cutoff, so a narrow search returns a short report rather than a padded one. An empty shortlist is a valid result.
+- On a full sweep, a tools result is excluded when it points to the same `owner/repo` as one of the kept skill results, so one repository is never presented twice. Keyword runs skip this: Step 1b has already given every repo exactly one track.
 - The pending candidates file is merged by GitHub source first and name second, so a rediscovered pending item is refreshed instead of duplicated. It keeps at most 60 pending entries; the newest report's entries always come first.
 
 Registry entries whose installed skill directory or plugin is now missing are reported as **stale**. They are never removed automatically; use the terminal-only `remove <name>` command if that cleanup is intended.
 
 ### How candidates are selected
 
-The skill searches the configured GitHub topics, organizations, keywords, and awesome lists. `/skills-discovery <keyword>` replaces those loops with one keyword search, but does not discard candidates found by previous runs.
+The skill searches the configured GitHub topics, organizations, keywords, and awesome lists. `/skills-discovery <keyword>` replaces those loops with a keyword search, but does not discard candidates found by previous runs.
 
-Each valid result is categorized and scored: +4 for an interested category, +1–3 for stars, +1 for a curated source, -2 for `other`, and -3 when the expected `SKILL.md`/`README.md` is absent. Results are sorted by score, stars, then name; the report keeps up to six skills and four tools. Repository names and summaries are validated and sanitized before they are saved or displayed.
+A keyword run expands the term into up to three deterministic queries — the keyword verbatim, `<keyword> skill`, and `topic:<keyword>` for single-token keywords — and merges the results. It then fetches each top repository's root listing and assigns a track by **evidence**: a root `SKILL.md`, `skills/`, `skill/`, or `.claude-plugin/` makes it a skill; everything else is a tool. An MCP server or library is therefore scored as a tool rather than penalized for not being a skill.
+
+Each valid result is categorized and scored: +4 for an interested category, +1–3 for stars, +1 for a curated source, -2 for `other`, and -3 when the expected `SKILL.md`/`README.md` is absent. Anything below `MIN_SCORE` (3) is discarded. Results are then sorted by score, stars, then name; the report keeps up to six skills and four tools. Two survivors sharing a name are shown as `name (owner)` so they can be told apart. Repository names and summaries are validated and sanitized before they are saved or displayed.
 
 ### Mode B — Install via approval reply
 
 ```text
 You: install 1 3 5
+Skill: resolve those numbers against that report's frozen shortlist snapshot
 Skill: git clone the 3 approved skills into <project-home>/skills/<name>/
 Skill: append entries to skills-registry.yaml (so they're skipped next run)
 Skill: clear <project-home>/skill-candidates.yaml
 Skill: reply ✅ summary
 ```
 
-`install all` means only the entries displayed in the latest report, not every carried-over pending entry. Candidate indices are validated before an install, so a malformed or stale candidates file is refused rather than targeting the wrong repository.
+**Report numbers stay valid.** Each report is frozen to its own `log/shortlist-<run_id>.yaml` before being sent, and the report footer carries that `run_id`. A reply is resolved against *that* snapshot, so replying to a three-day-old report still installs what that report showed — even though several discovery runs have renumbered the shared candidates file since. Only reports older than the last ten runs fall back to the shared file.
+
+`install all` means only the entries displayed in the report being answered, not every carried-over pending entry. Indices are validated first, so a malformed or unresolvable list is refused rather than targeting the wrong repository. An approved skill whose install path is already occupied is reported as **blocked** rather than overwriting what is there.
 
 ### Mode C — Remove an installed skill
 
@@ -234,6 +248,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | `<project-home>/skills/skills-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
 | `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs. v2.0: entries are objects `{name, source, stars, first_found, updated}`; v1.0 plain-string entries are auto-migrated on first run. |
 | `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Rewritten in full each run; merged across runs (deduplicated by source/name), capped at 60 entries; cleared after install/skip |
+| `<project-home>/log/shortlist-<run_id>.yaml` | Skill (write-once) | One frozen snapshot per report, naming exactly what was shown. Never edited; the ten most recent are kept. This is what `install <n>` resolves against |
 | `<project-home>/log/skills-discovery.log` | Skill (fallback) | Written when every Telegram delivery channel (MCP, openclaw, `tg_send`) is unavailable |
 
 ## 🛡️ Safety rails
