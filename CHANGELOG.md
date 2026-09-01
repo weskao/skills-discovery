@@ -1,3 +1,13 @@
+## [0.13.0] - 2026-09-01
+
+### 🚀 Features
+
+- **skill:** Detect renamed/removed skills in multi-skill repos
+- **skill:** Budget and sharpen the upstream skill check
+
+### ⚙️ Miscellaneous Tasks
+
+- Ignore .omc/ local state
 ## [0.12.0] - 2026-08-22
 
 ### 🚀 Features
@@ -7,6 +17,10 @@
 ### 📚 Documentation
 
 - **readme:** Clarify discovery behavior
+
+### ⚙️ Miscellaneous Tasks
+
+- **release:** Bump version to 0.12.0
 ## [0.11.0] - 2026-08-17
 
 ### 🚀 Features
