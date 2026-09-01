@@ -160,7 +160,8 @@ Step 1:  Read registry and installed state, build known-item sets
 Step 1b: Keyword runs only — expanded search, then assign each repo a track by evidence
 Step 2-3: Search GitHub (skills track + tools track)
 Step 4:  Diff against known, score 0–10, drop anything below MIN_SCORE (3),
-         keep top 6 skills + top 4 tools
+         keep top 6 skills + top 4 tools; refresh known stars and check the
+         upstream path of subdirectory skills (report-only)
 Step 5:  Merge + rewrite <project-home>/skill-candidates.yaml
          (this run's shortlist at indices 1–10; 60-entry retention cap;
           re-reads the file before writing so a concurrent run isn't clobbered)
@@ -172,13 +173,20 @@ Step 6:  Freeze the shortlist to log/shortlist-<run_id>.yaml, then send it
 
 Before scoring, the skill removes duplicates in the smallest useful scope:
 
-- A result is excluded when its GitHub **`owner/repo`** is already recorded in `skills-registry.yaml`. Repository identity, not the bare name, is the primary test — different authors publish same-named repos, so name-only matching would both hide genuinely new repos and let real duplicates through.
+- A result is excluded when its GitHub **`owner/repo[/subpath]`** is already recorded in `skills-registry.yaml`. Full source identity, not the bare name, is the primary test — different authors publish same-named repos, so name-only matching would both hide genuinely new repos and let real duplicates through. The subpath counts: a multi-skill collection holds many independent skills, so a registered `owner/repo/skills/a` does **not** hide a newly published `owner/repo/skills/b`. An entry recorded without a subpath does cover its whole repo.
 - A result is *additionally* excluded when its **name** is already taken: an entry in the registry, a directory at `<project-home>/skills/<name>/`, or a key in `plugins/installed_plugins.json`. This covers skills installed manually or with `claude plugin install`, and it prevents offering a skill that could not be cloned without overwriting one you already have.
 - Anything scoring below **`MIN_SCORE` (3)** is dropped before the top-6/top-4 cutoff, so a narrow search returns a short report rather than a padded one. An empty shortlist is a valid result.
 - On a full sweep, a tools result is excluded when it points to the same `owner/repo` as one of the kept skill results, so one repository is never presented twice. Keyword runs skip this: Step 1b has already given every repo exactly one track.
 - The pending candidates file is merged by GitHub source first and name second, so a rediscovered pending item is refreshed instead of duplicated. It keeps at most 60 pending entries; the newest report's entries always come first.
 
 Registry entries whose installed skill directory or plugin is now missing are reported as **stale**. They are never removed automatically; use the terminal-only `remove <name>` command if that cleanup is intended.
+
+Entries that live *inside* a repository are also checked against upstream, because a star count taken from the repo root cannot tell you that one skill in a collection was renamed or deleted. For up to ten repositories per run (oldest-checked first), the skill lists the parent directory of the paths it tracks and reports two findings:
+
+- **Upstream path gone** — the recorded subdirectory is no longer in the listing. Sibling directories you do not have are listed as rename hints.
+- **Looks superseded** — the subdirectory still exists, but its `SKILL.md` body is under five lines and names a sibling skill, the usual shape of a redirect stub left behind after a rename.
+
+Both are advisory lines in the report and nothing more: no uninstall, no rewritten `source`. They are heuristics that can be wrong — a renamed parent directory makes every entry under it look gone — so the decision stays with you. Skills installed outside the approval flow are included when their origin can be recovered from a `.source` file or a `.repos/<owner>__<repo>/…` symlink target; that recovered origin is used for the check only and is never written to the registry.
 
 ### How candidates are selected
 

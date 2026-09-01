@@ -74,6 +74,11 @@ These follow the same "defined in more than one place" hazard — keep them alig
 - **Delivery mechanism**: `SKILL.md` Step 6 is the source of truth for how the report is
   sent. If you change it, update the README's Telegram section so it doesn't advertise a
   path the spec no longer uses.
+- **Advisory report lines** (`STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, `SUPERSEDED`): the
+  collections are built in `SKILL.md` Steps 1 and 4, rendered in Step 6, and described in
+  the README's "What is filtered, and why" section. All three are **report-only** — no
+  code path may uninstall or rewrite an entry on their account. Adding a fourth finding
+  means touching all three places.
 - **`<SKILL_HOME>` vs `<project-home>`**: `SKILL.md` uses `<SKILL_HOME>`, `README.md`
   uses `<project-home>` — they mean the same thing. Keep the terminology mapping intact.
 
@@ -136,15 +141,26 @@ impractical again and this recurs: the cap is a correctness control, not tidines
 
 ## ⚠️ The identity invariant
 
-**A repository's identity is `owner/repo`, never its bare `name`.** Different authors
-publish same-named repos routinely (a single 2026-08 keyword run surfaced two distinct
-`facebook-ads-library-mcp` repos). Name-keyed logic fails in both directions: it hides a
-genuinely new repo behind a known one's name, and it lets a true duplicate through under
-a different name.
+**A resource's identity is `owner/repo[/subpath]` — never its bare `name`, and never the
+repo alone when the entry records a subpath.** Different authors publish same-named repos
+routinely (a single 2026-08 keyword run surfaced two distinct `facebook-ads-library-mcp`
+repos). Name-keyed logic fails in both directions: it hides a genuinely new repo behind a
+known one's name, and it lets a true duplicate through under a different name.
+
+The subpath half is the same error one level down, and it bit in 2026-09: `KNOWN_SOURCES`
+stripped `/subpath`, so a single registered skill from `mattpocock/skills` marked the
+*entire* collection known. Every other skill in that repo — including `grilling`, the
+rename of an installed `grill-me` — was dropped in Step 4 as a duplicate. A multi-skill
+repo is N independent resources, not one.
 
 Where this must hold:
 
-- Step 1 builds `KNOWN_SOURCES` from every entry's `source`; Step 4 diffs on it.
+- Step 1 builds `KNOWN_SOURCES` from every entry's `source`, **subpath included**; Step 4
+  diffs on the full string. The one intended widening: an entry with no subpath means the
+  whole repo is known and covers everything under it.
+- `INSTALLED_SOURCES` (Step 1, derived from `.source` files and `.repos/<owner>__<repo>/…`
+  symlink targets) feeds `KNOWN_SOURCES` and the Step 4 upstream check, but is **never**
+  written to `skills-registry.yaml` — it is inferred, not approved.
 - The `name` test survives *only* as the "install path already taken" check — that one is
   genuinely name-keyed, because `<SKILL_HOME>/skills/<name>/` is.
 - Mode B guards the clone path before every install. Two same-named candidates, or one

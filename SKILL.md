@@ -68,16 +68,28 @@ Build two sets and two maps:
 - `KNOWN_TOOLS` = set of names from `tools:` — same rule
 - `KNOWN_SKILL_ENTRIES` = map of `name → {source, stars, first_found, updated}` for every object entry in `skills:` (null fields are acceptable; used in Step 4 star-refresh)
 - `KNOWN_TOOL_ENTRIES` = same, for `tools:` object entries
-- `KNOWN_SOURCES` = set of `owner/repo` strings parsed from the `source` field of **every** object entry in both `skills:` and `tools:` (strip the `github:` prefix and any `/subpath`; skip entries whose `source` is null or non-GitHub)
+- `KNOWN_SOURCES` = set of `owner/repo[/subpath]` strings parsed from the `source` field of **every** object entry in both `skills:` and `tools:` (strip the `github:` prefix; **keep the `/subpath` exactly as recorded**; skip entries whose `source` is null or non-GitHub)
 
-`KNOWN_SOURCES` is the identity set that actually distinguishes repositories. A bare `name` does not: two unrelated authors routinely publish repos with the same name, so name-only matching both mistakes a new repo for a known one and lets a genuine duplicate through. Names still matter for the "already on disk" check below — a directory at `<SKILL_HOME>/skills/<name>/` really does mean that name is taken — so Step 4 checks both.
+`KNOWN_SOURCES` is the identity set that actually distinguishes resources. A bare `name` does not: two unrelated authors routinely publish repos with the same name, so name-only matching both mistakes a new repo for a known one and lets a genuine duplicate through. Names still matter for the "already on disk" check below — a directory at `<SKILL_HOME>/skills/<name>/` really does mean that name is taken — so Step 4 checks both.
+
+**The subpath is part of the identity.** A multi-skill collection publishes many independent skills under one repo, and knowing one of them says nothing about the others. Collapsing `mattpocock/skills/skills/productivity/grill-me` to `mattpocock/skills` makes every *other* skill in that repo permanently invisible — including the one that replaces it when the author renames a skill. Step 4's matching rule (below) therefore compares full source strings, with a single deliberate exception: an entry recorded **without** a subpath means the whole repo is known, and does cover everything under it.
 
 **Augment `KNOWN_SKILLS` from actual installed state** (catches skills installed outside this flow):
 
-1. **Skills directory**: add every directory name under `<SKILL_HOME>/skills/` to `KNOWN_SKILLS`.
+1. **Skills directory**: add every directory name under `<SKILL_HOME>/skills/` to `KNOWN_SKILLS` (a symlink to a directory counts as a directory).
 2. **Installed plugins**: read `<SKILL_HOME>/plugins/installed_plugins.json` (if present); for each key in the `plugins` object (format `<name>@<marketplace>`), strip the `@<marketplace>` suffix and add `<name>` to `KNOWN_SKILLS`.
 
 This ensures a skill installed via `claude plugin install` or `git clone` directly — without going through the Telegram approval flow — is never re-surfaced as a candidate.
+
+**Recover a `source` for directory installs (`INSTALLED_SOURCES`).** A name alone cannot be checked against upstream, so for every directory added in sub-step 1 that has **no** matching object entry in `skills:`, try to derive its origin — first match wins, and no derivation is an acceptable outcome:
+
+1. `<SKILL_HOME>/skills/<name>/.source` exists → read its single line; use it if it matches `github:<owner>/<repo>[/<subpath>]`.
+2. The entry is a symlink whose target path contains `.repos/<owner>__<repo>/<rest>` (the layout the `update-skills` clone flow uses) → derive `github:<owner>/<repo>/<rest>`.
+3. Otherwise → no source; the skill stays known by name only, exactly as before.
+
+Collect the results as `INSTALLED_SOURCES` = map of `name → source`, add each derived source to `KNOWN_SOURCES`, and treat these entries as inputs to the upstream check in Step 4 alongside `KNOWN_SKILL_ENTRIES`.
+
+**Never write `INSTALLED_SOURCES` back to `skills-registry.yaml`.** It is inferred, not approved: a derived path can be wrong (a renamed clone directory, a hand-made symlink), and the registry is durable state that only an explicit install or [Mode C](#mode-c--remove-an-installed-skill-terminal-only) may change. Derive it fresh each run.
 
 **Detect stale entries (report only, never auto-delete).** For every object entry in `skills:`, check whether its `name` has a matching directory under `<SKILL_HOME>/skills/` or a matching key in `installed_plugins.json`. Collect any that have neither into `STALE_SKILL_ENTRIES`. This mirrors the no-auto-repair rule: the registry is durable state, so a run that merely *notices* a missing install dir must not delete the entry itself — only [Mode C](#mode-c--remove-an-installed-skill-terminal-only) does that, and only on explicit request. Report `STALE_SKILL_ENTRIES` in Step 6's closing summary (see Step 6).
 
@@ -170,12 +182,19 @@ For each found tool, extract fields **per-repo, in a single pass over the same r
 
 ### Step 4. Diff and score
 
-Drop a candidate when **either** identity test matches — repository identity first, then the name-collision test:
+Drop a candidate when **either** identity test matches — resource identity first, then the name-collision test:
 
-| Track | Drop when `owner/repo` … | …or when `name` … |
+| Track | Drop when the candidate's `owner/repo[/subpath]` … | …or when `name` … |
 | --- | --- | --- |
-| Skills | ∈ `KNOWN_SOURCES` | ∈ `KNOWN_SKILLS` |
-| Tools | ∈ `KNOWN_SOURCES` | ∈ `KNOWN_TOOLS` |
+| Skills | is *covered* by `KNOWN_SOURCES` | ∈ `KNOWN_SKILLS` |
+| Tools | is *covered* by `KNOWN_SOURCES` | ∈ `KNOWN_TOOLS` |
+
+**Covered** means exactly one of:
+
+1. The candidate's full `owner/repo[/subpath]` string equals a member of `KNOWN_SOURCES`, or
+2. a member of `KNOWN_SOURCES` has **no** subpath and equals the candidate's `owner/repo` — the whole repo is already known, so everything inside it is too.
+
+A known `owner/repo/a` does **not** cover a candidate `owner/repo/b`: those are two different skills that happen to share a publisher. This is what lets a renamed or newly added skill in an already-known collection reach the report at all.
 
 The source test is the precise one; the name test additionally catches skills installed outside this flow (a directory or plugin whose origin the registry never recorded). A candidate dropped only by the name test is a *different* repo that wants an already-occupied install path — dropping it is correct, because Mode B could not clone it without clobbering (see Mode B's install-path guard).
 
@@ -232,7 +251,23 @@ Cap the WebFetch fallback at **10 entries per run** — if more than 10 entries 
 
 Write back to `skills-registry.yaml` only if at least one entry changed (avoid unnecessary disk writes). Log the count: `Refreshed stars for <N> known entries (<M> source backfilled, <W> via WebFetch).` If no entries qualify, skip silently.
 
-If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` and stop.
+**Check the upstream path of subdirectory skills (report only, never auto-repair).** Star counts come from the repo root, so an entry that points *inside* a repo is never actually verified: the skill it names can be renamed, deleted, or hollowed out into a redirect stub while the repo — and its star count — stay perfectly healthy. This sub-step is the only thing that looks at the path itself.
+
+**Input set:** every skills-track entry whose source has a subpath — object entries in `KNOWN_SKILL_ENTRIES` plus the derived entries in `INSTALLED_SOURCES` (Step 1). **Group them by `owner/repo`** and cap the check at **10 repos per run**, choosing the repos with the oldest `updated` date first (null first; derived entries have no `updated` and sort with null). One repo is one call regardless of how many of its skills you track.
+
+For each selected repo, call `mcp__github__get_file_contents` once on the **parent directory** of its entries' subpaths (for `skills/productivity/grill-me`, that is `skills/productivity/`). Then classify each entry of that repo:
+
+- **Listing failed** (404 on the parent, network error, rate limit) → log `Upstream check failed for <owner/repo>: <reason>` and classify nothing for that repo. A failed fetch is not evidence of a missing skill.
+- **Subpath absent from the listing** → add to `MOVED_OR_GONE` as `{name, source}`.
+- **Subpath present** → fetch that skill's `SKILL.md` and apply the **superseded heuristic**: strip the YAML frontmatter, then if the remaining body has **fewer than 5 non-blank lines** *and* mentions the name of another directory in the same parent listing, add to `SUPERSEDED` as `{name, source, replacement: <that other name>}`. Anything else is healthy — record nothing.
+
+For every repo checked, also collect its **unknown siblings**: directories in the parent listing that contain a `SKILL.md`, whose name is not in `KNOWN_SKILLS`, and whose `owner/repo/<sibling-path>` is not covered by `KNOWN_SOURCES`. Attach them to that repo's `MOVED_OR_GONE` / `SUPERSEDED` findings as rename hints. They are **hints only** — the sibling itself reaches the report the normal way, as a scored candidate from Step 2's org loop, or not at all.
+
+Nothing here modifies `skills-registry.yaml` or touches disk: the findings are reported in Step 6 and the user decides. This mirrors the `STALE_SKILL_ENTRIES` rule — noticing is not repairing. Log the outcome: `Upstream check: <R> repos, <G> gone, <S> superseded, <F> failed.`
+
+Both heuristics are deliberately conservative and both can be wrong. A legitimately tiny skill that happens to name a sibling reads as superseded; an author who renames the *parent* directory makes every entry under it look gone at once. Because the only consequence is one extra advisory line in the report, a false positive costs the user a glance — which is the correct price for catching a skill that has silently stopped being maintained.
+
+If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` **Include the `⚠️` advisory lines from Step 6 if `STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, or `SUPERSEDED` is non-empty** — those findings are independent of whether anything new was discovered — then stop.
 
 ### Step 5. Merge and write candidates file
 
@@ -428,11 +463,15 @@ run: <run_id>
 
 The `run: <run_id>` line is **required**, not decorative: it is how Mode B finds the snapshot that defines this report's numbering. A report sent without it can only be resolved by guessing at the shared pool file. Keep it on its own line, immediately after the `Reply:` line, so it survives being quoted in a Telegram reply.
 
-If `STALE_SKILL_ENTRIES` (from Step 1) is non-empty, append one line after the closing "Skill discovery complete" line:
+Append these advisory lines after the closing "Skill discovery complete" line — each only when its collection is non-empty, in this order:
 
 ```text
 ⚠️ Stale registry entries (installed dir missing): <name1>, <name2>. Remove with /skills-discovery remove <name>.
+⚠️ Upstream path gone: <name> (<source>)[ — repo now has: <sibling1>, <sibling2>]. Verify before removing.
+⚠️ Looks superseded upstream: <name> → <replacement> (<source>). Its SKILL.md is now a stub.
 ```
+
+`STALE_SKILL_ENTRIES` comes from Step 1 (local: the install directory is missing); `MOVED_OR_GONE` and `SUPERSEDED` come from Step 4's upstream check (remote: the path is gone, or the skill has been hollowed out into a redirect). They are advisory only — this skill never uninstalls or rewrites an entry on their account, and the sibling list is a hint, not a verified rename.
 
 End with one line reflecting the channel that actually succeeded: `Skill discovery complete. Sent <N> candidates. Awaiting reply.` for channels 1–3, or `Skill discovery complete. <N> candidates written to log (Telegram unavailable).` on the file fallback.
 
@@ -634,5 +673,6 @@ On refusal (user declines the confirmation): stop, change nothing, report `Remov
 | 10 | Resolve `install <n>` against `skill-candidates.yaml` when a snapshot exists | The pool is renumbered by every run, so an index from an earlier report resolves to a different repo — and passes every validation check, because the index is well-formed, just answered by the wrong document | Resolve against `log/shortlist-<run_id>.yaml` per Mode B Step 0a; the pool is the last-resort fallback only |
 | 11 | Overwrite `skill-candidates.yaml` without re-reading it first | A run that searched for minutes writes over a shortlist another run committed in the meantime — a lost update that deletes candidates a delivered report still refers to | Compare `generated_at` against `BASE_GENERATED_AT` in Step 5 sub-step 6; re-merge on mismatch |
 | 12 | Fill the report to 10 entries when scoring produced fewer good ones | "Top 6" is a rank cutoff with no floor, so a thin pool promotes negative-scoring junk into the report and trains the user to distrust the numbering | Apply `MIN_SCORE = 3` in Step 4 before any cutoff; a short or empty shortlist is a valid outcome |
-| 13 | Treat a bare repo `name` as a repository's identity | Different owners publish same-named repos: name-only matching both mistakes a new repo for a known one and lets a real duplicate through, and two same-named candidates collide on one install path | Match on `owner/repo` via `KNOWN_SOURCES`; keep the name test only for the "path already taken" case; guard the clone path in Mode B |
+| 13 | Treat a bare repo `name` as a resource's identity, or collapse a subpath source to its `owner/repo` | Different owners publish same-named repos, so name-only matching both mistakes a new repo for a known one and lets a real duplicate through. Collapsing the subpath is the same error one level down: knowing one skill in a collection hides every other skill in that repo forever, including the one that replaces a renamed skill | Match on the full `owner/repo[/subpath]` via `KNOWN_SOURCES`, with a subpath-less entry covering its whole repo; keep the name test only for the "path already taken" case; guard the clone path in Mode B |
 | 14 | Split one keyword query across both tracks by search batch | The same query fed both tracks, so a repo's track depended on which batch it landed in — putting MCP servers and libraries in the skills track where the `-3` no-`SKILL.md` penalty then punished them for not being skills | Step 1b assigns the track by evidence (root `SKILL.md` / `skills/` / `.claude-plugin/`), then hands each set to Step 2 or Step 3 |
+| 15 | Act on an upstream finding — uninstall a `MOVED_OR_GONE` skill, rewrite a `SUPERSEDED` entry's `source`, or persist a derived `INSTALLED_SOURCES` value | Both checks are conservative heuristics on data that can lie: a renamed *parent* directory makes every entry under it look gone, a small legitimate skill can read as a stub, and a derived source can point at a hand-made symlink. Editing durable state on that evidence loses a working install with nothing to undo it | Report the `⚠️` advisory lines in Step 6 and stop there; only an explicit Mode C `remove` or a Mode B install may change `skills-registry.yaml` |
