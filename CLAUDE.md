@@ -57,11 +57,20 @@ watchlist but not to `SKILL.md`.)
 A quick manual diff that catches most drift:
 
 ```bash
+# mechanical check — categories, advisory findings, constants, identity guard
+python3 scripts/check-category-sync.py
 # category keys declared in the template
 grep -E '^\s{2}\w+:' skills-registry.template.yaml
-# category names the spec can actually assign
-grep -nE 'category — infer' SKILL.md
+# category names the spec can actually assign (note the backticks — without them
+# this pattern matches nothing, which reads as "no categories found")
+grep -nE '`category` — infer' SKILL.md
 ```
+
+`scripts/check-category-sync.py` runs in CI on every push and PR. It fails on a
+missing category, an advisory finding that is produced but never rendered (or
+vice versa), a numeric constant that disagrees between `SKILL.md` and `README.md`,
+and any re-introduction of the subpath-stripping rule. Run it before committing —
+it is the only automated safety net this repo has.
 
 ## Other cross-document sync points
 
@@ -74,11 +83,17 @@ These follow the same "defined in more than one place" hazard — keep them alig
 - **Delivery mechanism**: `SKILL.md` Step 6 is the source of truth for how the report is
   sent. If you change it, update the README's Telegram section so it doesn't advertise a
   path the spec no longer uses.
-- **Advisory report lines** (`STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, `SUPERSEDED`): the
-  collections are built in `SKILL.md` Steps 1 and 4, rendered in Step 6, and described in
-  the README's "What is filtered, and why" section. All three are **report-only** — no
-  code path may uninstall or rewrite an entry on their account. Adding a fourth finding
-  means touching all three places.
+- **Advisory report lines** (`STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, `PARENT_MOVED`,
+  `SUPERSEDED`): the collections are built in `SKILL.md` Steps 1 and 4, rendered in
+  Step 6, and described in the README's "What is filtered, and why" section. All four are
+  **report-only** — no code path may uninstall or rewrite an entry on their account.
+  Adding a fifth means touching all three places **and** the `ADVISORY` list in
+  `scripts/check-category-sync.py`, which fails the build if either end is unwired.
+- **Numeric constants** stated in both `SKILL.md` and `README.md` (upstream repo cap,
+  stub line threshold, content-fetch budget, per-repo candidate cap, recheck window) are
+  extracted and compared by the same script. Change a number in one file and CI fails —
+  but note the extraction is regex-anchored on the surrounding wording, so a *rewrite* of
+  that sentence must keep the anchor phrase or update `CONSTANTS` in the script.
 - **`<SKILL_HOME>` vs `<project-home>`**: `SKILL.md` uses `<SKILL_HOME>`, `README.md`
   uses `<project-home>` — they mean the same thing. Keep the terminology mapping intact.
 
@@ -168,6 +183,27 @@ Where this must hold:
   directory.
 - Step 4 disambiguates same-name survivors to `name (owner)` for **display only**. The
   stored `name` stays path-safe — never write the disambiguated form to `name`.
+
+## ⚠️ Upstream findings are heuristics — keep them cheap and conservative
+
+Step 4's upstream check exists because a star count is fetched from the repo *root*, so
+an entry pointing inside a repo is otherwise never verified: `mattpocock/skills`'s
+`grill-me` still returns HTTP 200 while its `SKILL.md` has been reduced to one line
+pointing at `grilling`. Three rules keep the check from becoming a nuisance:
+
+1. **One upstream event, one report line.** A moved parent directory collapses to a single
+   `PARENT_MOVED` finding. Reporting seven "gone" lines for one rename trains the user to
+   ignore the section.
+2. **Both stub clauses are required** — body ≤ 2 non-blank lines *and* the sibling named
+   in the first body line. Either one alone produces false positives on terse skills.
+3. **Listings are cheap, content fetches are not.** The fingerprint cache and the
+   10-fetch budget are what make this affordable on a registry with 22 subpath entries
+   across 10 repos, which is a realistic size. Do not add a per-entry fetch without a
+   budget.
+
+**Rejected signal — do not add it:** treating upstream `disable-model-invocation: true`
+as a deprecation marker. `grill-me` happens to carry it, but its actual meaning is
+"slash-command only", which many healthy skills set. It would flag them all.
 
 ## ⚠️ Track assignment is by evidence, not by search batch
 

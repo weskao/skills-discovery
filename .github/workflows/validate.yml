@@ -21,7 +21,7 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 -c "import yaml; yaml.safe_load(open('skills-registry.template.yaml')); print('template YAML OK')"
 
-      - name: Category sync (template vs SKILL.md vs README)
+      - name: Spec sync (categories, advisory findings, constants, identity guard)
         run: python3 scripts/check-category-sync.py
 
       - name: Markdown lint

@@ -216,9 +216,12 @@ Sort descending by score; break ties by stars descending, then by `name` ascendi
 
 Apply the cutoffs in this order — a repo may appear in only one track per report:
 
-1. Keep the top 6 skills-track candidates.
-2. **Cross-track dedup (full sweep only):** drop any tools-track candidate whose `owner/repo` (from `source`) matches one of those kept top-6 skills entries. Compare against the **kept** skills only, not the full scored set — a full sweep can legitimately surface the same repo from a skills topic and a tools keyword, but deduping against the full scored set would annihilate the tools track. **Skip this sub-step entirely in keyword mode** — Step 1b already assigned every repo exactly one track, so there is nothing to dedup and running it anyway would delete valid tools entries.
-3. Keep the top 4 remaining tools-track candidates.
+1. **Per-repo cap:** keep at most **2** candidates from any single `owner/repo`; the lower-scoring ones are *deferred*, not discarded (Step 5 sub-step 2 still writes them to the pool as Tier 2, where the report footer points the user). Now that a subpath no longer marks a whole collection known, a multi-skill repo can legitimately produce six new candidates at once — the first run after such a repo is registered usually does — and letting one publisher fill the shortlist buries every other find. The cap spreads that burst over runs.
+
+   Known ceiling: with no rotation rule, a repo whose candidates the user neither installs nor skips keeps offering the same two. That is already how any repeatedly-skipped candidate behaves, and the deferred ones remain listed in `skill-candidates.yaml`, so this is a visibility trade-off rather than a loss. Do not add rotation machinery to fix it.
+2. Keep the top 6 skills-track candidates.
+3. **Cross-track dedup (full sweep only):** drop any tools-track candidate whose `owner/repo` (from `source`) matches one of those kept top-6 skills entries. Compare against the **kept** skills only, not the full scored set — a full sweep can legitimately surface the same repo from a skills topic and a tools keyword, but deduping against the full scored set would annihilate the tools track. **Skip this sub-step entirely in keyword mode** — Step 1b already assigned every repo exactly one track, so there is nothing to dedup and running it anyway would delete valid tools entries.
+4. Keep the top 4 remaining tools-track candidates.
 
 Result: 10 candidates max, no repo shown twice under different numbers.
 
@@ -257,17 +260,39 @@ Write back to `skills-registry.yaml` only if at least one entry changed (avoid u
 
 For each selected repo, call `mcp__github__get_file_contents` once on the **parent directory** of its entries' subpaths (for `skills/productivity/grill-me`, that is `skills/productivity/`). Then classify each entry of that repo:
 
-- **Listing failed** (404 on the parent, network error, rate limit) → log `Upstream check failed for <owner/repo>: <reason>` and classify nothing for that repo. A failed fetch is not evidence of a missing skill.
+- **Listing failed** (network error, rate limit, or any non-404 error) → log `Upstream check failed for <owner/repo>: <reason>` and classify nothing for that repo. A failed fetch is not evidence of a missing skill.
+- **Listing 404s** → the parent path may really be gone, but a 404 is also what an auth or rate-limit failure can look like. Confirm with **one** call on the repo root: root also fails → treat as "listing failed" above; root succeeds → the parent is genuinely gone, so record a single `PARENT_MOVED` finding `{repo, parent, entry_names, root_listing}` for the repo and classify none of its entries individually.
 - **Subpath absent from the listing** → add to `MOVED_OR_GONE` as `{name, source}`.
-- **Subpath present** → fetch that skill's `SKILL.md` and apply the **superseded heuristic**: strip the YAML frontmatter, then if the remaining body has **fewer than 5 non-blank lines** *and* mentions the name of another directory in the same parent listing, add to `SUPERSEDED` as `{name, source, replacement: <that other name>}`. Anything else is healthy — record nothing.
+- **Subpath present** → fetch that skill's `SKILL.md` (subject to the fetch budget below) and apply the **superseded heuristic**. Flag it only when **both** hold: the body — frontmatter stripped — has **2 or fewer** non-blank lines, **and** the *first* non-blank body line names another directory from the same parent listing. Record as `SUPERSEDED` `{name, source, replacement, upstream_lines, local_lines}`. Anything else is healthy — record nothing.
 
-For every repo checked, also collect its **unknown siblings**: directories in the parent listing that contain a `SKILL.md`, whose name is not in `KNOWN_SKILLS`, and whose `owner/repo/<sibling-path>` is not covered by `KNOWN_SOURCES`. Attach them to that repo's `MOVED_OR_GONE` / `SUPERSEDED` findings as rename hints. They are **hints only** — the sibling itself reaches the report the normal way, as a scored candidate from Step 2's org loop, or not at all.
+  Both clauses are load-bearing. A line threshold alone flags legitimately terse skills; "names a sibling anywhere in the body" alone flags a skill that merely cross-references one ("…then hand off with `handoff`"). A redirect stub is recognisable by the pointer *being* the content: `Call the Skill tool with "grilling".` is one line, and the sibling is its subject.
 
-Nothing here modifies `skills-registry.yaml` or touches disk: the findings are reported in Step 6 and the user decides. This mirrors the `STALE_SKILL_ENTRIES` rule — noticing is not repairing. Log the outcome: `Upstream check: <R> repos, <G> gone, <S> superseded, <F> failed.`
+**Collapse a moved parent into one finding.** After classifying a repo's entries, if **every** tracked entry of that repo landed in `MOVED_OR_GONE` and there are 2 or more of them, replace them all with one `PARENT_MOVED` finding (same shape as the 404 path above). An author who restructures a parent directory — `skills/productivity/` → `skills/prod/` — moves every skill under it in one commit; rendering that as seven separate "gone" lines buries the single fact the user needs. When only *some* of a repo's entries are gone the parent is demonstrably intact, so those stay individual `MOVED_OR_GONE` findings — as does a lone missing skill, which is one event already.
+
+**Corroborate with the local copy — free, no API call.** The installed `SKILL.md` is already on disk at the skill's install path (following the symlink for a `.repos/` install), so count its non-blank body lines too and let the finding say which of two different things happened:
+
+- local **5 or more** non-blank lines longer than upstream → the skill was *hollowed out after you installed it*; your copy still works but upstream has abandoned it.
+- both are stubs → *you installed the stub*; the replacement is where the content went.
+
+A missing or unreadable local file simply omits the distinction — never fail the run over it.
+
+**Skip repos whose listing has not changed (`log/upstream-seen.yaml`).** Content fetches are the expensive half of this check and they find nothing on almost every run. Before fetching, load this file — a map of `owner/repo → {fingerprint, checked}`, where `fingerprint` is the sorted, newline-joined directory names from the parent listing:
+
+- fingerprint **unchanged** and every one of that repo's entries was checked within the last **30 days** → nothing was added, renamed, or removed since last run, so skip that repo's content fetches entirely.
+- fingerprint **changed** → something moved; run the content checks for that repo.
+- `checked` missing or older than the recheck window → run the content checks regardless of the fingerprint. This is what catches a skill hollowed out *in place*, which by definition never changes the listing; amortised it costs about one repo per day.
+
+Write the file back at the end of the check with fresh fingerprints and today's date. It is **derived, mutable, disposable** state — the opposite of `log/shortlist-*.yaml`, which is write-once. Deleting it costs one run of redundant fetches and nothing else, so never store registry facts in it.
+
+**Fetch budget: at most 10 `SKILL.md` fetches per run**, oldest `checked` first. Same bound, and the same reason, as the WebFetch star fallback above: a registry tracking 22 subdirectory skills would otherwise spend 22 content fetches per run on a check that is almost always negative.
+
+For every repo checked, also collect its **unknown siblings**: directories in the parent listing that contain a `SKILL.md`, whose name is not in `KNOWN_SKILLS`, and whose `owner/repo/<sibling-path>` is not covered by `KNOWN_SOURCES`. Attach them to that repo's `MOVED_OR_GONE` / `PARENT_MOVED` / `SUPERSEDED` findings as rename hints. They are **hints only** — the sibling itself reaches the report the normal way, as a scored candidate from Step 2's org loop, or not at all.
+
+Nothing here modifies `skills-registry.yaml` or touches disk: the findings are reported in Step 6 and the user decides. This mirrors the `STALE_SKILL_ENTRIES` rule — noticing is not repairing. Log the outcome: `Upstream check: <R> repos (<K> skipped by fingerprint), <G> gone, <P> parents moved, <S> superseded, <F> failed.`
 
 Both heuristics are deliberately conservative and both can be wrong. A legitimately tiny skill that happens to name a sibling reads as superseded; an author who renames the *parent* directory makes every entry under it look gone at once. Because the only consequence is one extra advisory line in the report, a false positive costs the user a glance — which is the correct price for catching a skill that has silently stopped being maintained.
 
-If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` **Include the `⚠️` advisory lines from Step 6 if `STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, or `SUPERSEDED` is non-empty** — those findings are independent of whether anything new was discovered — then stop.
+If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): No new resources found today.` **Include the `⚠️` advisory lines from Step 6 if any of `STALE_SKILL_ENTRIES`, `MOVED_OR_GONE`, `PARENT_MOVED`, or `SUPERSEDED` is non-empty** — those findings are independent of whether anything new was discovered — then stop.
 
 ### Step 5. Merge and write candidates file
 
@@ -276,12 +301,12 @@ If 0 candidates remain after diff: send Telegram `📦 Skills Report (<date>): N
 Merge the new batch into `<SKILL_HOME>/skill-candidates.yaml` using the following algorithm:
 
 1. **Read existing entries** — if the file exists and `candidates:` is non-empty, load those entries as the *existing set*. If the file is absent or empty, the existing set is empty. **Record the file's `generated_at` value as `BASE_GENERATED_AT`** (null if the file was absent) — sub-step 6 uses it to detect a concurrent writer.
-2. **Merge new batch** — for each candidate in the top-6/top-4 new batch, look up a match in the existing set (match on `source` first, fall back to `name`):
+2. **Merge new batch** — for each candidate in the top-6/top-4 new batch **and each candidate deferred by Step 4's per-repo cap**, look up a match in the existing set (match on `source` first, fall back to `name`):
    - Match found → update `stars`, `score`, `summary`, and `last_seen` from the fresh data. **Leave `first_seen` unchanged** — it records the original discovery date.
    - No match → the candidate is new; **append** it with `first_seen: <today>` and `last_seen: <today>`.
 3. **Refresh found-but-not-top existing entries** — for each remaining existing entry NOT already updated in step 2, check whether its name/source appeared anywhere in the raw search results (Steps 2–3, before the top-6/4 cutoff). If it was found, update its `stars`, `score`, `summary`, and `last_seen` from the fresh data. **Leave `first_seen` unchanged.** If it was not found at all in this run's searches, **leave it unchanged** — never delete it just because it was outside this run's keyword scope.
 4. **Sort into canonical order.** Two tiers, in this order:
-   - **Tier 1 — this run's shortlist:** every entry whose `last_seen` equals today AND which came from this run's top-6/top-4 new batch (step 2 above). Never more than 10 entries.
+   - **Tier 1 — this run's shortlist:** every entry whose `last_seen` equals today AND which came from this run's top-6/top-4 new batch (step 2 above). Never more than 10 entries. A candidate deferred by the per-repo cap is **never** Tier 1 — it was written to the pool but not shown, so it must not occupy an index the report numbered.
    - **Tier 2 — carried over:** everything else.
 
    Within each tier: skills track first, then tools track; within each track, group by category in the Step 6 header order; within each group, score descending, then stars descending, then `name` ascending (case-insensitive).
@@ -468,10 +493,15 @@ Append these advisory lines after the closing "Skill discovery complete" line �
 ```text
 ⚠️ Stale registry entries (installed dir missing): <name1>, <name2>. Remove with /skills-discovery remove <name>.
 ⚠️ Upstream path gone: <name> (<source>)[ — repo now has: <sibling1>, <sibling2>]. Verify before removing.
-⚠️ Looks superseded upstream: <name> → <replacement> (<source>). Its SKILL.md is now a stub.
+⚠️ Parent path moved in <owner/repo>: <parent> no longer exists; <N> tracked skills are under it. Re-check the repo layout.
+⚠️ Looks superseded upstream: <name> → <replacement> (<source>). <stub-note>
 ```
 
-`STALE_SKILL_ENTRIES` comes from Step 1 (local: the install directory is missing); `MOVED_OR_GONE` and `SUPERSEDED` come from Step 4's upstream check (remote: the path is gone, or the skill has been hollowed out into a redirect). They are advisory only — this skill never uninstalls or rewrites an entry on their account, and the sibling list is a hint, not a verified rename.
+`STALE_SKILL_ENTRIES` comes from Step 1 (local: the install directory is missing). `MOVED_OR_GONE`, `PARENT_MOVED`, and `SUPERSEDED` come from Step 4's upstream check (remote: one path is gone, a whole parent directory is gone, or the skill has been hollowed out into a redirect). `PARENT_MOVED` replaces the per-entry lines for that repo — one upstream event gets one line, never one per affected skill.
+
+`<stub-note>` is the local-copy corroboration from Step 4: `Its SKILL.md was hollowed out after you installed it.` when the local copy is the longer one, otherwise `You installed the stub; the content is in <replacement>.`
+
+All four are advisory only. This skill never uninstalls a skill or rewrites a registry entry on their account; the sibling list is a hint, not a verified rename.
 
 End with one line reflecting the channel that actually succeeded: `Skill discovery complete. Sent <N> candidates. Awaiting reply.` for channels 1–3, or `Skill discovery complete. <N> candidates written to log (Telegram unavailable).` on the file fallback.
 
