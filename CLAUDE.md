@@ -120,7 +120,7 @@ refers to must be immutable too. That is the snapshot. Keep these three clauses 
 | --- | --- | --- |
 | Snapshot written before sending | `SKILL.md` Step 6, first block | Freezes exactly what the report shows |
 | `run:` line in the report footer | `SKILL.md` Step 6 format block | Lets a reply name its own snapshot |
-| Reply resolved via `RESOLVED_LIST` | `SKILL.md` Mode B Step 0a | Snapshot first, newest snapshot second, pool last |
+| Reply resolved via `RESOLVED_LIST` | `references/mode-b.md` Step 0a | Snapshot first, newest snapshot second, pool last |
 
 Never make snapshots mutable "to save space" — pruning to the last 10 is the only
 permitted deletion. Rewriting one retroactively changes what a past report is understood

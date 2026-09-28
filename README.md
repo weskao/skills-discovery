@@ -259,6 +259,7 @@ All paths are relative to the host project's `<project-home>` (e.g. `~/.claude/`
 | Path | Owner | Lifecycle |
 | --- | --- | --- |
 | `<project-home>/skills/skills-discovery/SKILL.md` | This repo | Updated via `git pull` |
+| `<project-home>/skills/skills-discovery/references/mode-{b,c}.md` | This repo | Mode B (reply install) and Mode C (remove) procedures, read only when that mode runs |
 | `<project-home>/skills/skills-discovery/skills-registry.template.yaml` | This repo | Bundled default — seeds your registry on first run only |
 | `<project-home>/skills-registry.yaml` | **You** | Created from template; append-only updates when you approve installs. v2.0: entries are objects `{name, source, stars, first_found, updated}`; v1.0 plain-string entries are auto-migrated on first run. |
 | `<project-home>/skill-candidates.yaml` | Skill (ephemeral) | Rewritten in full each run; merged across runs (deduplicated by source/name), capped at 60 entries; cleared after install/skip |
