@@ -1,3 +1,8 @@
+## [0.13.1] - 2026-09-29
+
+### 🚜 Refactor
+
+- **skill:** Split Mode B and Mode C into references/
 ## [0.13.0] - 2026-09-01
 
 ### 🚀 Features
@@ -8,6 +13,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Ignore .omc/ local state
+- **release:** Bump version to 0.13.0
 ## [0.12.0] - 2026-08-22
 
 ### 🚀 Features
